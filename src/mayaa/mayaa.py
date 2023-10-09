@@ -319,13 +319,17 @@ class MayaaScene:
         self.core: MayaaCore = core
         self.name = scene_name
         self.position = pg.Vector2([0, 0])
-        self.manager = manager
+        self.manager: MayaaSceneManager = manager
         self.manager.add_scene(self)
         self.container: _MayaaContainer = None
         self.modals = []  # Fancy word for pop up windows
         self.informer = self.core.info_tag
         self.surface = pg.Surface(self.core.display.get_size())
         self.is_active = False
+        self.background_color = MayaaDefaultGUI.DEFAULT_SCENE_BACKGROUND_COLOR
+
+    def set_background_color(self, color):
+        self.background_color = color
 
     def resize(self):
         # why did I make this method
@@ -346,7 +350,7 @@ class MayaaScene:
         self.core.display.blit(self.surface, self.position)
 
     def fill_color(self):
-        self.surface.fill(MayaaDefaultGUI.DEFAULT_SCENE_BACKGROUND_COLOR)
+        self.surface.fill(self.background_color)
 
     def render_container(self):
         self.container.__corerender__()
@@ -382,6 +386,7 @@ class _MayaaContainer:
             self.height = MayaaCoreFlag.NOT_DECLARED_ON_INIT
             self.width_flag = MayaaCoreFlag.NOT_DECLARED_ON_INIT
             self.height_flag = MayaaCoreFlag.NOT_DECLARED_ON_INIT
+            self.margin = 0
             self.surface = MayaaCoreFlag.NOT_DECLARED_ON_INIT
             self.position = pg.Vector2(0, 0)
             if isinstance(parent, MayaaScene):
@@ -392,8 +397,8 @@ class _MayaaContainer:
             else:
                 self.absolute_position = pg.Vector2(0, 0)
             self.rect = MayaaCoreFlag.NOT_DECLARED_ON_INIT
-            self.color = MayaaDefaultGUI.DEFAULT_CONTAINER_BACKGROUND_COLOR
-            self.original_color = self.color.copy()
+            self.background_color = MayaaDefaultGUI.DEFAULT_CONTAINER_BACKGROUND_COLOR
+            self.original_color = self.background_color.copy()
             self.font = pg.font.SysFont(
                 MayaaDefaultGUI.DEFAULT_FONT_TYPE, MayaaDefaultGUI.DEFAULT_FONT_SIZE
             )
@@ -405,13 +410,16 @@ class _MayaaContainer:
                 [False, None, None],
             ]
 
+    def set_margin(self, margin):
+        self.margin = margin
+
     def set_color_as_parent(self):
-        self.color = self.parent.color
-        self.original_color = self.color
+        self.background_color = self.parent.background_color
+        self.original_color = self.background_color
 
     def set_background_color(self, color):
-        self.color = color
-        self.original_color = self.color
+        self.background_color = color
+        self.original_color = self.background_color
 
     def get_absolute_position(self):
         return self.parent.absolute_position + self.position
@@ -473,7 +481,13 @@ class _MayaaContainer:
         for element in self.elements:
             element.height = self._compute_elements_surfaces_handle_height_case(element)
             element.width = self._compute_elements_surfaces_handle_width_case(element)
-            element.surface = pg.Surface([element.width, element.height])
+
+            element.surface = pg.Surface(
+                [
+                    element.width - 2 * element.margin,
+                    element.height - 2 * element.margin,
+                ]
+            )
             if isinstance(element, _MayaaContainer):
                 element.compute_elements_surfaces()
 
@@ -564,7 +578,8 @@ class _MayaaContainer:
         ...
 
     def __corerender__(self):
-        self.surface.fill(self.color)
+        self.surface.fill(self.background_color)
+
         self.render_borders()
         self.render()
 
@@ -610,11 +625,16 @@ class MayaaStackVertical(_MayaaContainer):
 
     def compute_elements_positions(self):
         accum = pg.Vector2(0, 0)
+
         for element in self.elements:
-            element.position.x = accum.x
-            element.position.y = accum.y
-            element.absolute_position.x = self.absolute_position.x + accum.x
-            element.absolute_position.y = self.absolute_position.y + accum.y
+            element.position.x = accum.x + element.margin
+            element.position.y = accum.y + element.margin
+            element.absolute_position.x = (
+                self.absolute_position.x + accum.x + element.margin
+            )
+            element.absolute_position.y = (
+                self.absolute_position.y + accum.y + element.margin
+            )
             element.rect = pg.Rect(
                 element.absolute_position, element.surface.get_size()
             )
@@ -630,14 +650,18 @@ class MayaaStackHorizontal(_MayaaContainer):
     def compute_elements_positions(self):
         accum = pg.Vector2(0, 0)
         for element in self.elements:
-            element.position.x = accum.x
-            element.position.y = accum.y
-            element.absolute_position.x = self.absolute_position.x + accum.x
-            element.absolute_position.y = self.absolute_position.y + accum.y
+            element.position.x = accum.x + element.margin
+            element.position.y = accum.y + element.margin
+            element.absolute_position.x = (
+                self.absolute_position.x + accum.x + element.margin
+            )
+            element.absolute_position.y = (
+                self.absolute_position.y + accum.y + element.margin
+            )
             element.rect = pg.Rect(
                 element.absolute_position, element.surface.get_size()
             )
-            accum.y += element.width
+            accum.x += element.width
         return super().compute_elements_positions()
 
 
@@ -798,7 +822,9 @@ class MayaaCore:
             self.bacgkround_color = MayaaDefaultGUI.DEFAULT_APP_BACKGROUND_COLOR
 
     def check_events(self):
+        self.scene_manager.pump_event(None)
         for event in pg.event.get():
+            self.scene_manager.pump_event(event)
             if event.type == pg.QUIT:
                 exit()
             if event.type == pg.MOUSEBUTTONDOWN:
