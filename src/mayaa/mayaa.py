@@ -1,4 +1,5 @@
 import math
+from typing import Dict
 import pygame as pg
 from enum import Enum
 
@@ -163,6 +164,7 @@ class MayaaDefaultGUI:
     DEFAULT_APP_WIDTH = 360
     DEFAULT_APP_BACKGROUND_COLOR = MayaaColors.BLACKBLUE
     DEFAULT_CONTAINER_BACKGROUND_COLOR = MayaaColors.DARKBLUE
+    DEFAULT_SCENE_BACKGROUND_COLOR = MayaaColors.DARKBLUE
     DEFAULT_FONT_SIZE = 16
     DEFAULT_TEXT_INPUT_SIZE = 16
     DEFAULT_FONT_TYPE = "consolas"
@@ -264,12 +266,108 @@ class AnimVal:
         self.perform()
 
 
-class MayaaComponent:
-    def __init__(self) -> None:
-        pass
+class MayaaSceneManager:
+    def __init__(self, core) -> None:
+        self.core: MayaaCore = core
+        self.scenes: Dict["str", MayaaScene] = {}
+        self.current_scene_name = MayaaCoreFlag.NOT_DECLARED_ON_INIT
+        self.current_scene = MayaaCoreFlag.NOT_DECLARED_ON_INIT
+        self.events = []
+
+    def set_init_scene(self, scene_name):
+        self.current_scene_name = scene_name
+
+    def get_events(self):
+        return self.events
+
+    def pump_event(self, event):
+        if event:
+            self.events.append(event)
+        else:
+            self.events.clear()
+
+    def add_scene(self, scene):
+        self.scenes[scene.name] = scene
+
+    def update_scene_sizes(self):
+        for scene in self.scenes.values():
+            scene.resize()
+
+    def update_scene_ids(self):
+        self.current_scene = self.scenes[self.current_scene_name]
+
+    def go_to(self, scene_name):
+        self.current_scene_name = scene_name
+
+    def resize_current_surface(self):
+        self.current_scene.surface = pg.Surface(pg.display.get_window_size())
+        self.current_scene.container.set_size_as_display()
+        self.current_scene.container.set_position_as_core()
+        self.current_scene.container.compute_elements_surfaces()
+        self.current_scene.container.compute_elements_positions()
+
+    def update(self):
+        self.update_scene_ids()
+        self.current_scene.__coreupdate__()
+
+    def render(self):
+        self.current_scene.__corerender__()
 
 
 class MayaaScene:
+    def __init__(self, core, scene_name, handler) -> None:
+        self.core: MayaaCore = core
+        self.name = scene_name
+        self.position = pg.Vector2([0, 0])
+        self.handler = handler
+        self.handler.add_scene(self)
+        self.container: _MayaaContainer = None
+        self.modals = []  # Fancy word for pop up windows
+        self.informer = self.core.info_tag
+        self.surface = pg.Surface(self.core.display.get_size())
+        self.is_active = False
+
+    def resize(self):
+        # why did I make this method
+        self.surface = pg.Surface(self.core.display.get_size())
+
+    def update(self):
+        # do your update stuff here
+        ...
+
+    def update_container(self):
+        self.container.__coreupdate__()
+
+    def __coreupdate__(self):
+        self.update()
+        self.update_container()
+
+    def blit_into_core(self):
+        self.core.display.blit(self.surface, self.position)
+
+    def fill_color(self):
+        self.surface.fill(MayaaDefaultGUI.DEFAULT_SCENE_BACKGROUND_COLOR)
+
+    def render_container(self):
+        self.container.__corerender__()
+
+    def render_modals(self):
+        # modals here modals there
+        ...
+
+    def render(self):
+        # do your render stuff here  YES I KNOW DOCSTRINGS EXIST
+        ...
+
+    def __corerender__(self):
+        self.fill_color()
+        self.render_container()
+        self.render_modals()
+        self.render()
+        self.blit_into_core()
+
+
+class MayaaComponent:
     def __init__(self) -> None:
         pass
 
@@ -385,6 +483,10 @@ class _MayaaContainer:
         self.surface = pg.Surface([self.width, self.height])
         self.rect = pg.Rect(self.abs_pos, self.surface.get_size())
 
+    def set_position_as_core(self):
+        self.position = pg.Vector2(0, 0)
+        self.absolute_position = pg.Vector2(0, 0)
+
     def border(self, color, thick):
         self.border_left(color, thick)
         self.border_right(color, thick)
@@ -497,6 +599,42 @@ class _MayaaContainer:
                         border[2],
                         pg.Rect(0, self.height - border[1], self.width, border[1]),
                     )
+
+
+class MayaaStackVertical(_MayaaContainer):
+    def __init__(self, parent) -> None:
+        super().__init__(parent)
+
+    def compute_elements_positions(self):
+        accum = pg.Vector2(0, 0)
+        for element in self.elements:
+            element.position.x = accum.x
+            element.position.y = accum.y
+            element.absolute_position.x = self.absolute_position.x + accum.x
+            element.absolute_position.y = self.absolute_position.y + accum.y
+            element.rect = pg.Rect(
+                element.absolute_position, element.surface.get_size()
+            )
+            accum.y += element.height
+        return super().compute_elements_positions()
+
+
+class MayaaStackHorizontal(_MayaaContainer):
+    def __init__(self, parent) -> None:
+        super().__init__(parent)
+
+    def compute_elements_positions(self):
+        accum = pg.Vector2(0, 0)
+        for element in self.elements:
+            element.position.x = accum.x
+            element.position.y = accum.y
+            element.absolute_position.x = self.absolute_position.x + accum.x
+            element.absolute_position.y = self.absolute_position.y + accum.y
+            element.rect = pg.Rect(
+                element.absolute_position, element.surface.get_size()
+            )
+            accum.y += element.width
+        return super().compute_elements_positions()
 
 
 class TagProperty:
