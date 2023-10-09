@@ -12,6 +12,7 @@ class ImageApp(mayaa.MayaaCore):
         super().__init__()
         self.set_application_name("Image in Mayaa")
         self.set_background_color(mayaa.MayaaColors.ALICEWHITE)
+        mayaa
 
 
 app = ImageApp()

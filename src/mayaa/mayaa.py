@@ -161,7 +161,8 @@ class MayaaColors:
 class MayaaDefaultGUI:
     DEFAULT_APP_HEIGHT = 600
     DEFAULT_APP_WIDTH = 360
-    DEFAULT_SCENE_BACKGROUND_COLOR = MayaaColors.DARKBLUE
+    DEFAULT_APP_BACKGROUND_COLOR = MayaaColors.BLACKBLUE
+    DEFAULT_CONTAINER_BACKGROUND_COLOR = MayaaColors.DARKBLUE
     DEFAULT_FONT_SIZE = 16
     DEFAULT_TEXT_INPUT_SIZE = 16
     DEFAULT_FONT_TYPE = "consolas"
@@ -169,6 +170,15 @@ class MayaaDefaultGUI:
     DEFAULT_TEXT_HOVER_COLOR = MayaaColors.DARKBLUE
     HEADER_FONT_SIZE = 20
     SECONDARY_FONT_SIZE = 12
+
+
+class MayaaRenderFlag(Enum):
+    DISPLAY_HEIGHT_REMAIN = 0
+    DISPLAY_HEIGHT_WINDOW = 1
+    DISPLAY_HEIGHT_PARENT = 2
+    DISPLAY_WIDTH_REMAIN = 3
+    DISPLAY_WIDTH_WINDOW = 4
+    DISPLAY_WIDTH_PARENT = 5
 
 
 class MayaaCoreFlag(Enum):
@@ -252,6 +262,241 @@ class AnimVal:
         if self.begin_movement:
             self.tick += 1
         self.perform()
+
+
+class MayaaComponent:
+    def __init__(self) -> None:
+        pass
+
+
+class MayaaScene:
+    def __init__(self) -> None:
+        pass
+
+
+class _MayaaContainer:
+    def __init__(self, parent) -> None:
+        if isinstance(parent, MayaaScene) or isinstance(parent, _MayaaContainer):
+            self.parent = parent
+            self.parent.container = self
+            self.elements = []
+            self.width = MayaaCoreFlag.NOT_DECLARED_ON_INIT
+            self.height = MayaaCoreFlag.NOT_DECLARED_ON_INIT
+            self.width_flag = MayaaCoreFlag.NOT_DECLARED_ON_INIT
+            self.height_flag = MayaaCoreFlag.NOT_DECLARED_ON_INIT
+            self.surface = MayaaCoreFlag.NOT_DECLARED_ON_INIT
+            self.position = pg.Vector2(0, 0)
+            if isinstance(parent, MayaaScene):
+                self.scene = parent
+            if isinstance(parent, _MayaaContainer):
+                self.scene = parent.scene
+                self.absolute_position = self.parent.absolute_position + self.position
+            else:
+                self.absolute_position = pg.Vector2(0, 0)
+            self.rect = MayaaCoreFlag.NOT_DECLARED_ON_INIT
+            self.color = MayaaDefaultGUI.DEFAULT_CONTAINER_BACKGROUND_COLOR
+            self.original_color = self.color.copy()
+            self.font = pg.font.SysFont(
+                MayaaDefaultGUI.DEFAULT_FONT_TYPE, MayaaDefaultGUI.DEFAULT_FONT_SIZE
+            )
+            self.is_hovered = False
+            self.borders = [
+                [False, None, None],
+                [False, None, None],
+                [False, None, None],
+                [False, None, None],
+            ]
+
+    def set_color_as_parent(self):
+        self.color = self.parent.color
+        self.original_color = self.color.copy()
+
+    def set_background_color(self, color):
+        self.color = color
+        self.original_color = self.color.copy()
+
+    def get_absolute_position(self):
+        return self.parent.absolute_position + self.position
+
+    def is_container_hovered(self):
+        return self.rect.collidepoint(pg.mouse.get_pos())
+
+    def compute_elements_positions(self):
+        for element in self.elements:
+            element.compute_elements_positions()
+
+    def _compute_elements_surfaces_handle_height_case(self, element):
+        if element.width_flag == MayaaRenderFlag.DISPLAY_WIDTH_WINDOW:
+            element.width = pg.display.get_window_size()[0]
+        if element.width_flag == MayaaRenderFlag.DISPLAY_WIDTH_PARENT:
+            element.width = element.parent.width
+        if element.width_flag == MayaaRenderFlag.DISPLAY_WIDTH_REMAIN:
+            accum_width = 0
+            for other_element in self.elements:
+                if other_element == element:
+                    continue
+                else:
+                    if (
+                        other_element.width == MayaaCoreFlag.NOT_DECLARED_ON_INIT
+                        or other_element.width_flag
+                        == MayaaRenderFlag.DISPLAY_WIDTH_REMAIN
+                    ):
+                        raise ValueError(
+                            "Could not build surface. No enough information was given [TWO LAYOUTS WITH NO DEFINED WIDTH]"
+                        )
+                    accum_width += other_element.width
+            element.width = element.parent.width - accum_width
+
+    def _compute_elements_surfaces_handle_width_case(self, element):
+        if element.height_flag == MayaaRenderFlag.DISPLAY_HEIGHT_WINDOW:
+            element.height = pg.display.get_window_size()[0]
+        if element.height_flag == MayaaRenderFlag.DISPLAY_HEIGHT_PARENT:
+            element.height = element.parent.height
+        if element.height_flag == MayaaRenderFlag.DISPLAY_HEIGHT_REMAIN:
+            accum_height = 0
+            for other_element in self.elements:
+                if other_element == element:
+                    continue
+                else:
+                    if (
+                        other_element.height == MayaaCoreFlag.NOT_DECLARED_ON_INIT
+                        or other_element.height_flag
+                        == MayaaRenderFlag.DISPLAY_HEIGHT_REMAIN
+                    ):
+                        raise ValueError(
+                            "Could not build surface. No enough information was given [TWO LAYOUTS WITH NO DEFINED HEIGHT]"
+                        )
+                    accum_height += other_element.height
+            element.height = element.parent.height - accum_height
+
+    def compute_elements_surfaces(self):
+        for element in self.elements:
+            self._compute_elements_surfaces_handle_height_case(element)
+            self._compute_elements_surfaces_handle_width_case(element)
+            element.surface = pg.Surface([element.width, element.height])
+            if isinstance(element, _MayaaContainer):
+                element.compute_elements_surfaces()
+
+    def set_as_core(self):
+        self.position = pg.Vector2(0, 0)
+        self.absolute_position = pg.Vector2(0, 0)
+        self.width = pg.display.get_window_size()[0]
+        self.height = pg.display.get_window_size()[1]
+        self.surface = pg.Surface([self.width, self.height])
+        self.rect = pg.Rect(self.abs_pos, self.surface.get_size())
+
+    def border(self, color, thick):
+        self.border_left(color, thick)
+        self.border_right(color, thick)
+        self.border_up(color, thick)
+        self.border_down(color, thick)
+
+    def border_left(self, color, thick):
+        self.borders[0][0] = True
+        self.borders[0][1] = thick
+        self.borders[0][2] = color
+
+    def border_right(self, color, thick):
+        self.borders[1][0] = True
+        self.borders[1][1] = thick
+        self.borders[1][2] = color
+
+    def border_up(self, color, thick):
+        self.borders[2][0] = True
+        self.borders[2][1] = thick
+        self.borders[2][2] = color
+
+    def border_down(self, color, thick):
+        self.borders[3][0] = True
+        self.borders[3][1] = thick
+        self.borders[3][2] = color
+
+    def set_size_as_display(self):
+        self.width = pg.display.get_window_size()[0]
+        self.height = pg.display.get_window_size()[1]
+        self.surface = pg.Surface([self.width, self.height])
+
+    def set_height_as_display(self):
+        self.height_flag = MayaaRenderFlag.DISPLAY_HEIGHT_WINDOW
+
+    def set_width_as_display(self):
+        self.width_flag = MayaaRenderFlag.DISPLAY_WIDTH_WINDOW
+
+    def set_height_as_remaining_area(self):
+        self.height_flag = MayaaRenderFlag.DISPLAY_HEIGHT_REMAIN
+
+    def set_width_as_remaining_area(self):
+        self.width_flag = MayaaRenderFlag.DISPLAY_WIDTH_REMAIN
+
+    def set_height_as_parent(self):
+        self.height_flag = MayaaRenderFlag.DISPLAY_HEIGHT_PARENT
+
+    def set_width_as_parent(self):
+        self.width_flag = MayaaRenderFlag.DISPLAY_WIDTH_PARENT
+
+    def set_fixed_width(self, value):
+        self.width = value
+
+    def set_fixed_height(self, value):
+        self.height = value
+
+    def add_element(self, element):
+        if isinstance(element, (MayaaComponent, _MayaaContainer)):
+            self.elements.append(element)
+        else:
+            raise ValueError(
+                "Classes that are not Component or Containers cannot be added to a Container parent"
+            )
+
+    def update(self):
+        ...
+
+    def __coreupdate__(self):
+        self.update()
+        for element in self.elements:
+            element.__coreupdate__()
+
+    def render(self):
+        ...
+
+    def __corerender__(self):
+        self.surface.fill(self.color)
+        self.render_borders()
+        self.render()
+        for element in self.elements:
+            element.__corerender__()
+        self.parent.surface.blit(self.surface, self.position)
+
+    def render_borders(self):
+        for index, border in enumerate(self.borders):
+            if border[0] == False:
+                continue
+            else:
+                if index == 0:
+                    pg.draw.rect(
+                        self.surface, border[2], pg.Rect(0, 0, border[1], self.height)
+                    )
+                if index == 1:
+                    pg.draw.rect(
+                        self.surface,
+                        border[2],
+                        pg.Rect(
+                            self.width - border[1],
+                            0,
+                            self.width - border[1],
+                            self.height,
+                        ),
+                    )
+                if index == 2:
+                    pg.draw.rect(
+                        self.surface, border[2], pg.Rect(0, 0, self.width, border[1])
+                    )
+                if index == 3:
+                    pg.draw.rect(
+                        self.surface,
+                        border[2],
+                        pg.Rect(0, self.height - border[1], self.width, border[1]),
+                    )
 
 
 class TagProperty:
@@ -407,7 +652,7 @@ class MayaaCore:
         if self.clock == MayaaCoreFlag.NOT_DECLARED_ON_INIT:
             self.set_clock(60)
         if self.bacgkround_color == MayaaCoreFlag.NOT_DECLARED_ON_INIT:
-            self.bacgkround_color = MayaaDefaultGUI.DEFAULT_SCENE_BACKGROUND_COLOR
+            self.bacgkround_color = MayaaDefaultGUI.DEFAULT_APP_BACKGROUND_COLOR
 
     def check_events(self):
         for event in pg.event.get():
