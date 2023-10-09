@@ -315,12 +315,12 @@ class MayaaSceneManager:
 
 
 class MayaaScene:
-    def __init__(self, core, scene_name, handler) -> None:
+    def __init__(self, core, scene_name, manager) -> None:
         self.core: MayaaCore = core
         self.name = scene_name
         self.position = pg.Vector2([0, 0])
-        self.handler = handler
-        self.handler.add_scene(self)
+        self.manager = manager
+        self.manager.add_scene(self)
         self.container: _MayaaContainer = None
         self.modals = []  # Fancy word for pop up windows
         self.informer = self.core.info_tag
@@ -407,11 +407,11 @@ class _MayaaContainer:
 
     def set_color_as_parent(self):
         self.color = self.parent.color
-        self.original_color = self.color.copy()
+        self.original_color = self.color
 
     def set_background_color(self, color):
         self.color = color
-        self.original_color = self.color.copy()
+        self.original_color = self.color
 
     def get_absolute_position(self):
         return self.parent.absolute_position + self.position
@@ -423,11 +423,11 @@ class _MayaaContainer:
         for element in self.elements:
             element.compute_elements_positions()
 
-    def _compute_elements_surfaces_handle_height_case(self, element):
+    def _compute_elements_surfaces_handle_width_case(self, element):
         if element.width_flag == MayaaRenderFlag.DISPLAY_WIDTH_WINDOW:
-            element.width = pg.display.get_window_size()[0]
+            return pg.display.get_window_size()[0]
         if element.width_flag == MayaaRenderFlag.DISPLAY_WIDTH_PARENT:
-            element.width = element.parent.width
+            return element.parent.width
         if element.width_flag == MayaaRenderFlag.DISPLAY_WIDTH_REMAIN:
             accum_width = 0
             for other_element in self.elements:
@@ -443,13 +443,14 @@ class _MayaaContainer:
                             "Could not build surface. No enough information was given [TWO LAYOUTS WITH NO DEFINED WIDTH]"
                         )
                     accum_width += other_element.width
-            element.width = element.parent.width - accum_width
+            return element.parent.width - accum_width
+        return element.width
 
-    def _compute_elements_surfaces_handle_width_case(self, element):
+    def _compute_elements_surfaces_handle_height_case(self, element):
         if element.height_flag == MayaaRenderFlag.DISPLAY_HEIGHT_WINDOW:
-            element.height = pg.display.get_window_size()[0]
+            return pg.display.get_window_size()[1]
         if element.height_flag == MayaaRenderFlag.DISPLAY_HEIGHT_PARENT:
-            element.height = element.parent.height
+            return element.parent.height
         if element.height_flag == MayaaRenderFlag.DISPLAY_HEIGHT_REMAIN:
             accum_height = 0
             for other_element in self.elements:
@@ -465,12 +466,13 @@ class _MayaaContainer:
                             "Could not build surface. No enough information was given [TWO LAYOUTS WITH NO DEFINED HEIGHT]"
                         )
                     accum_height += other_element.height
-            element.height = element.parent.height - accum_height
+            return element.parent.height - accum_height
+        return element.height
 
     def compute_elements_surfaces(self):
         for element in self.elements:
-            self._compute_elements_surfaces_handle_height_case(element)
-            self._compute_elements_surfaces_handle_width_case(element)
+            element.height = self._compute_elements_surfaces_handle_height_case(element)
+            element.width = self._compute_elements_surfaces_handle_width_case(element)
             element.surface = pg.Surface([element.width, element.height])
             if isinstance(element, _MayaaContainer):
                 element.compute_elements_surfaces()
@@ -481,7 +483,7 @@ class _MayaaContainer:
         self.width = pg.display.get_window_size()[0]
         self.height = pg.display.get_window_size()[1]
         self.surface = pg.Surface([self.width, self.height])
-        self.rect = pg.Rect(self.abs_pos, self.surface.get_size())
+        self.rect = pg.Rect(self.absolute_position, self.surface.get_size())
 
     def set_position_as_core(self):
         self.position = pg.Vector2(0, 0)
@@ -565,6 +567,7 @@ class _MayaaContainer:
         self.surface.fill(self.color)
         self.render_borders()
         self.render()
+
         for element in self.elements:
             element.__corerender__()
         self.parent.surface.blit(self.surface, self.position)
@@ -616,6 +619,7 @@ class MayaaStackVertical(_MayaaContainer):
                 element.absolute_position, element.surface.get_size()
             )
             accum.y += element.height
+
         return super().compute_elements_positions()
 
 
@@ -751,6 +755,7 @@ class MayaaCore:
         self.delta_time = MayaaCoreFlag.NOT_DECLARED_ON_INIT
         self.caption = MayaaCoreFlag.NOT_DECLARED_ON_INIT
         self.info_tag = InfoTagHandler(self)
+        self.scene_manager = MayaaSceneManager(self)
 
     def set_application_name(self, title):
         self.caption = title
@@ -783,8 +788,8 @@ class MayaaCore:
 
     def late_init(self):
         if self.display == MayaaCoreFlag.NOT_DECLARED_ON_INIT:
-            self.set_display_size(
-                MayaaDefaultGUI.DEFAULT_APP_HEIGHT, MayaaDefaultGUI.DEFAULT_APP_WIDTH
+            raise ValueError(
+                "Display was not initialized, perhaps you forgot set_display_size() ?"
             )
 
         if self.clock == MayaaCoreFlag.NOT_DECLARED_ON_INIT:
@@ -798,6 +803,8 @@ class MayaaCore:
                 exit()
             if event.type == pg.MOUSEBUTTONDOWN:
                 self.info_tag.inform("Info System", InfoTagLevels.NOTIFY)
+            if event.type == pg.VIDEORESIZE:
+                self.scene_manager.resize_current_surface()
 
     def set_background_color(self, color):
         self.bacgkround_color = color
@@ -809,6 +816,7 @@ class MayaaCore:
         if self.perform_late_init:
             self.late_init()
             self.perform_late_init = not self.perform_late_init
+        self.scene_manager.update()
         self.info_tag.update()
 
     def render(self):
@@ -816,7 +824,9 @@ class MayaaCore:
 
     def __corerender__(self):
         self.display.fill(self.bacgkround_color)
+        self.scene_manager.render()
         self.info_tag.render()
+
         self.render()
         pg.display.flip()
 
