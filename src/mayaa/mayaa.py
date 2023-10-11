@@ -186,7 +186,8 @@ class MayaaRenderFlag(Enum):
     DISPLAY_WIDTH_PANEL = 7
 
     CORE_CONTAINER = 8
-    SLIDABLE_CONTAINER = 9
+    SLIDABLE_CONTAINER_VERTICAL = 9
+    SLIDABLE_CONTAINER_HORIZONTAL = 10
 
 
 class MayaaCoreFlag(Enum):
@@ -315,8 +316,7 @@ class MayaaSceneManager:
             self.current_scene.surface = pg.Surface(pg.display.get_window_size())
             self.current_scene.container.set_size_as_display()
             self.current_scene.container.set_position_as_core()
-            self.current_scene.container.compute_elements_surfaces()
-            self.current_scene.container.compute_elements_positions()
+            self.current_scene.container.remake_rendering_tree_from_here()
 
     def update(self):
         self.update_scene_ids()
@@ -422,6 +422,10 @@ class _MayaaContainer:
                 [False, None, None],
                 [False, None, None],
             ]
+            self.should_late_init = True
+
+    def late_init(self):
+        ...
 
     def set_margin(self, margin):
         self.margin = margin
@@ -449,6 +453,11 @@ class _MayaaContainer:
             element.populate_rects()
 
     def _compute_elements_surfaces_handle_width_case(self, element):
+        if element.parent.type_flag == MayaaRenderFlag.SLIDABLE_CONTAINER_HORIZONTAL:
+            print("here lol")
+            return element.parent.width // 2
+        if element.parent.type_flag == MayaaRenderFlag.SLIDABLE_CONTAINER_VERTICAL:
+            return element.parent.width
         if element.width_flag == MayaaRenderFlag.DISPLAY_WIDTH_WINDOW:
             return pg.display.get_window_size()[0]
         if element.width_flag == MayaaRenderFlag.DISPLAY_WIDTH_PARENT:
@@ -472,6 +481,10 @@ class _MayaaContainer:
         return element.width
 
     def _compute_elements_surfaces_handle_height_case(self, element):
+        if element.parent.type_flag == MayaaRenderFlag.SLIDABLE_CONTAINER_HORIZONTAL:
+            return element.parent.height
+        if element.parent.type_flag == MayaaRenderFlag.SLIDABLE_CONTAINER_VERTICAL:
+            return element.parent.height // 2
         if element.height_flag == MayaaRenderFlag.DISPLAY_HEIGHT_WINDOW:
             return pg.display.get_window_size()[1]
         if element.height_flag == MayaaRenderFlag.DISPLAY_HEIGHT_PARENT:
@@ -508,6 +521,16 @@ class _MayaaContainer:
             )
             if isinstance(element, _MayaaContainer):
                 element.compute_elements_surfaces()
+
+    def compute_extra_inherit(self):
+        for element in self.elements:
+            element.compute_extra_inherit()
+
+    def remake_rendering_tree_from_here(self):
+        print("que", self.__class__.__name__)
+        self.compute_elements_surfaces()
+        self.compute_elements_positions()
+        self.compute_extra_inherit()
 
     def set_as_core(self):
         self.position = pg.Vector2(0, 0)
@@ -599,12 +622,19 @@ class _MayaaContainer:
         ...
 
     def __coreupdate__(self):
+        if self.should_late_init:
+            print(f"Performing late init in {self.__class__.__name__}")
+            self.late_init()
+            self.should_late_init = False
         self.update()
         self.inherit_update()
         for element in self.elements:
             element.__coreupdate__()
 
     def render(self):
+        ...
+
+    def inherit_render(self):
         ...
 
     def __corerender__(self):
@@ -615,6 +645,7 @@ class _MayaaContainer:
 
         for element in self.elements:
             element.__corerender__()
+        self.inherit_render()
         self.parent.surface.blit(self.surface, self.position)
 
     def render_borders(self):
@@ -707,74 +738,56 @@ class MayaaStackHorizontal(_MayaaContainer):
 class MayaaSlidablePanel(_MayaaContainer):
     def __init__(self, parent) -> None:
         super().__init__(parent)
-        self.type_flag = MayaaRenderFlag.SLIDABLE_CONTAINER
+        self.type_flag = MayaaRenderFlag.SLIDABLE_CONTAINER_VERTICAL
         self.width_flag = MayaaRenderFlag.DISPLAY_WIDTH_PANEL
         self.height_flag = MayaaRenderFlag.DISPLAY_HEIGHT_PANEL
+
+    def late_init(self):
+        print(self.surface.get_size(), self.absolute_position)
+        return super().late_init()
 
 
 class MayaaSlidablePanelHorizontal(MayaaStackHorizontal):
     def __init__(self, parent) -> None:
         super().__init__(parent)
-        self.type_flag = MayaaRenderFlag.SLIDABLE_CONTAINER
+        self.type_flag = MayaaRenderFlag.SLIDABLE_CONTAINER_HORIZONTAL
         self.perform_late_init = True
-        self.rect_list = []
-        self.rect_width = 10
+        self.slider_width = 5
         self.handle_get = False
         self.mouse_handle = pg.Vector2(pg.mouse.get_pos())
         self.separator = MayaaCoreFlag.NOT_DECLARED_ON_INIT
+        self.middle_x = MayaaCoreFlag.NOT_DECLARED_ON_INIT
+        self.middle_y = MayaaCoreFlag.NOT_DECLARED_ON_INIT
+        self.slider = MayaaCoreFlag.NOT_DECLARED_ON_INIT
 
-    def populate_rects(self):
-        self.rect_list.clear()
-        if len(self.elements) > 1:
-            for index, element in enumerate(self.elements[:-1]):
-                rectx = element.absolute_position.x + element.width - self.rect_width
-                recty = element.absolute_position.y
-                rectw = self.rect_width
-                recth = element.height
+    def compute_extra_inherit(self):
+        self.remake_slider()
 
-                nextrectx = self.elements[index + 1].absolute_position.x
-                nextrecty = self.elements[index + 1].absolute_position.y
-                nextrectw = self.rect_width
-                nextrecth = self.elements[index + 1].height
-                self.rect_list.append(pg.Rect(rectx, recty, rectw, recth))
-                self.rect_list.append(
-                    pg.Rect(nextrectx, nextrecty, nextrectw, nextrecth)
-                )
+    def late_init(self):
+        print("width of panel: ", self.width)
+        self.remake_slider()
+        return super().late_init()
+
+    def remake_slider(self):
+        self.middle_x = self.width // 2
+        self.middle_y = 0
+        self.slider = pg.Rect(
+            self.middle_x - self.slider_width,
+            self.middle_y,
+            self.slider_width,
+            self.height,
+        )
+        print(self.middle_x)
 
     def inherit_update(self):
-        if self.perform_late_init:
-            self.populate_rects()
-            self.perform_late_init = False
-        self.rect_get = False
-        rel = [0, 0]
-        if self.handle_get:
-            rel = pg.Vector2(pg.mouse.get_pos()) - self.mouse_handle
-        # self.scene.informer.inform(f"{rel}")
-        for index, rect in enumerate(self.rect_list):
-            if rect.collidepoint(pg.mouse.get_pos()) and pg.mouse.get_pressed(3)[0]:
-                if self.rect_get == False:
-                    self.mouse_handle = pg.mouse.get_pos()
-                self.handle_get = True
-                self.rect_get = True
+        if len(self.elements) == 0:
+            raise ValueError("A Slidable Panel must have children elements")
+        if len(self.elements) != 2:
+            raise ValueError(f"Panel must have two children elements")
+        return super().inherit_update()
 
-                if index % 2 == 1:
-                    width = self.elements[index * 2 - 1].width
-
-                    self.elements[index * 2 - 1].set_fixed_width(width - rel[0])
-                    self.populate_rects()
-                if index % 2 == 0:
-                    width = self.elements[index * 2].width
-
-                    self.elements[index * 2].set_fixed_width(width + rel[0])
-                    self.populate_rects()
-                self.compute_elements_surfaces()
-                self.compute_elements_positions()
-
-        if self.rect_get == False and pg.mouse.get_pressed(3)[0] == False:
-            self.scene.informer.inform("handle lost")
-            self.handle_get = False
-            #  0   12    34   56   7
-            #  0   1     2    3    4
+    def inherit_render(self):
+        pg.draw.rect(self.surface, "white", self.slider, 0)
 
 
 class TagProperty:
