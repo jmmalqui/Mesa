@@ -1,5 +1,6 @@
 import math
-from typing import Dict
+import random
+from typing import Dict, Union
 import pygame as pg
 from enum import Enum
 
@@ -178,9 +179,14 @@ class MayaaRenderFlag(Enum):
     DISPLAY_HEIGHT_REMAIN = 0
     DISPLAY_HEIGHT_WINDOW = 1
     DISPLAY_HEIGHT_PARENT = 2
-    DISPLAY_WIDTH_REMAIN = 3
-    DISPLAY_WIDTH_WINDOW = 4
-    DISPLAY_WIDTH_PARENT = 5
+    DISPLAY_HEIGHT_PANEL = 3
+    DISPLAY_WIDTH_REMAIN = 4
+    DISPLAY_WIDTH_WINDOW = 5
+    DISPLAY_WIDTH_PARENT = 6
+    DISPLAY_WIDTH_PANEL = 7
+
+    CORE_CONTAINER = 8
+    SLIDABLE_CONTAINER = 9
 
 
 class MayaaCoreFlag(Enum):
@@ -248,8 +254,11 @@ class AnimVal:
             return
         if self.tick == self.anim_duration:
             self.begin_movement = False
-        anim_pos = self.animation_curve(self.tick / self.anim_duration)
-        self.value = self.start_value + anim_pos * self.value_diff
+        if self.animation_curve:
+            anim_pos = self.animation_curve(self.tick / self.anim_duration)
+            self.value = self.start_value + anim_pos * self.value_diff
+        else:
+            self.value = -1
 
     def move_to(self, target_value, duration, curve):
         self.tick = 0
@@ -271,7 +280,9 @@ class MayaaSceneManager:
         self.core: MayaaCore = core
         self.scenes: Dict["str", MayaaScene] = {}
         self.current_scene_name = MayaaCoreFlag.NOT_DECLARED_ON_INIT
-        self.current_scene = MayaaCoreFlag.NOT_DECLARED_ON_INIT
+        self.current_scene: Union[
+            MayaaScene, MayaaCoreFlag
+        ] = MayaaCoreFlag.NOT_DECLARED_ON_INIT
         self.events = []
 
     def set_init_scene(self, scene_name):
@@ -300,11 +311,12 @@ class MayaaSceneManager:
         self.current_scene_name = scene_name
 
     def resize_current_surface(self):
-        self.current_scene.surface = pg.Surface(pg.display.get_window_size())
-        self.current_scene.container.set_size_as_display()
-        self.current_scene.container.set_position_as_core()
-        self.current_scene.container.compute_elements_surfaces()
-        self.current_scene.container.compute_elements_positions()
+        if self.current_scene != MayaaCoreFlag.NOT_DECLARED_ON_INIT:
+            self.current_scene.surface = pg.Surface(pg.display.get_window_size())
+            self.current_scene.container.set_size_as_display()
+            self.current_scene.container.set_position_as_core()
+            self.current_scene.container.compute_elements_surfaces()
+            self.current_scene.container.compute_elements_positions()
 
     def update(self):
         self.update_scene_ids()
@@ -379,6 +391,7 @@ class MayaaComponent:
 class _MayaaContainer:
     def __init__(self, parent) -> None:
         if isinstance(parent, MayaaScene) or isinstance(parent, _MayaaContainer):
+            self.type_flag = MayaaRenderFlag.CORE_CONTAINER
             self.parent = parent
             self.parent.container = self
             self.elements = []
@@ -427,9 +440,13 @@ class _MayaaContainer:
     def is_container_hovered(self):
         return self.rect.collidepoint(pg.mouse.get_pos())
 
+    def populate_rects(self):
+        ...
+
     def compute_elements_positions(self):
         for element in self.elements:
             element.compute_elements_positions()
+            element.populate_rects()
 
     def _compute_elements_surfaces_handle_width_case(self, element):
         if element.width_flag == MayaaRenderFlag.DISPLAY_WIDTH_WINDOW:
@@ -478,6 +495,7 @@ class _MayaaContainer:
         return element.height
 
     def compute_elements_surfaces(self):
+        self.rect = pg.Rect(self.absolute_position, self.surface.get_size())
         for element in self.elements:
             element.height = self._compute_elements_surfaces_handle_height_case(element)
             element.width = self._compute_elements_surfaces_handle_width_case(element)
@@ -497,11 +515,19 @@ class _MayaaContainer:
         self.width = pg.display.get_window_size()[0]
         self.height = pg.display.get_window_size()[1]
         self.surface = pg.Surface([self.width, self.height])
-        self.rect = pg.Rect(self.absolute_position, self.surface.get_size())
+        self.rect = pg.Rect(self.absolute_position, pg.display.get_window_size())
 
     def set_position_as_core(self):
         self.position = pg.Vector2(0, 0)
         self.absolute_position = pg.Vector2(0, 0)
+
+    def borderless(self):
+        self.borders = [
+            [False, None, None],
+            [False, None, None],
+            [False, None, None],
+            [False, None, None],
+        ]
 
     def border(self, color, thick):
         self.border_left(color, thick)
@@ -569,8 +595,12 @@ class _MayaaContainer:
     def update(self):
         ...
 
+    def inherit_update(self):
+        ...
+
     def __coreupdate__(self):
         self.update()
+        self.inherit_update()
         for element in self.elements:
             element.__coreupdate__()
 
@@ -594,28 +624,37 @@ class _MayaaContainer:
             else:
                 if index == 0:
                     pg.draw.rect(
-                        self.surface, border[2], pg.Rect(0, 0, border[1], self.height)
+                        self.surface,
+                        border[2],
+                        pg.Rect(0, 0, border[1], self.surface.get_height()),
                     )
                 if index == 1:
                     pg.draw.rect(
                         self.surface,
                         border[2],
                         pg.Rect(
-                            self.width - border[1],
+                            self.surface.get_width() - border[1],
                             0,
-                            self.width - border[1],
-                            self.height,
+                            self.surface.get_width() - border[1],
+                            self.surface.get_height(),
                         ),
                     )
                 if index == 2:
                     pg.draw.rect(
-                        self.surface, border[2], pg.Rect(0, 0, self.width, border[1])
+                        self.surface,
+                        border[2],
+                        pg.Rect(0, 0, self.surface.get_width(), border[1]),
                     )
                 if index == 3:
                     pg.draw.rect(
                         self.surface,
                         border[2],
-                        pg.Rect(0, self.height - border[1], self.width, border[1]),
+                        pg.Rect(
+                            0,
+                            self.surface.get_height() - border[1],
+                            self.surface.get_width(),
+                            border[1],
+                        ),
                     )
 
 
@@ -663,6 +702,79 @@ class MayaaStackHorizontal(_MayaaContainer):
             )
             accum.x += element.width
         return super().compute_elements_positions()
+
+
+class MayaaSlidablePanel(_MayaaContainer):
+    def __init__(self, parent) -> None:
+        super().__init__(parent)
+        self.type_flag = MayaaRenderFlag.SLIDABLE_CONTAINER
+        self.width_flag = MayaaRenderFlag.DISPLAY_WIDTH_PANEL
+        self.height_flag = MayaaRenderFlag.DISPLAY_HEIGHT_PANEL
+
+
+class MayaaSlidablePanelHorizontal(MayaaStackHorizontal):
+    def __init__(self, parent) -> None:
+        super().__init__(parent)
+        self.type_flag = MayaaRenderFlag.SLIDABLE_CONTAINER
+        self.perform_late_init = True
+        self.rect_list = []
+        self.rect_width = 10
+        self.handle_get = False
+        self.mouse_handle = pg.Vector2(pg.mouse.get_pos())
+        self.separator = MayaaCoreFlag.NOT_DECLARED_ON_INIT
+
+    def populate_rects(self):
+        self.rect_list.clear()
+        if len(self.elements) > 1:
+            for index, element in enumerate(self.elements[:-1]):
+                rectx = element.absolute_position.x + element.width - self.rect_width
+                recty = element.absolute_position.y
+                rectw = self.rect_width
+                recth = element.height
+
+                nextrectx = self.elements[index + 1].absolute_position.x
+                nextrecty = self.elements[index + 1].absolute_position.y
+                nextrectw = self.rect_width
+                nextrecth = self.elements[index + 1].height
+                self.rect_list.append(pg.Rect(rectx, recty, rectw, recth))
+                self.rect_list.append(
+                    pg.Rect(nextrectx, nextrecty, nextrectw, nextrecth)
+                )
+
+    def inherit_update(self):
+        if self.perform_late_init:
+            self.populate_rects()
+            self.perform_late_init = False
+        self.rect_get = False
+        rel = [0, 0]
+        if self.handle_get:
+            rel = pg.Vector2(pg.mouse.get_pos()) - self.mouse_handle
+        # self.scene.informer.inform(f"{rel}")
+        for index, rect in enumerate(self.rect_list):
+            if rect.collidepoint(pg.mouse.get_pos()) and pg.mouse.get_pressed(3)[0]:
+                if self.rect_get == False:
+                    self.mouse_handle = pg.mouse.get_pos()
+                self.handle_get = True
+                self.rect_get = True
+
+                if index % 2 == 1:
+                    width = self.elements[index * 2 - 1].width
+
+                    self.elements[index * 2 - 1].set_fixed_width(width - rel[0])
+                    self.populate_rects()
+                if index % 2 == 0:
+                    width = self.elements[index * 2].width
+
+                    self.elements[index * 2].set_fixed_width(width + rel[0])
+                    self.populate_rects()
+                self.compute_elements_surfaces()
+                self.compute_elements_positions()
+
+        if self.rect_get == False and pg.mouse.get_pressed(3)[0] == False:
+            self.scene.informer.inform("handle lost")
+            self.handle_get = False
+            #  0   12    34   56   7
+            #  0   1     2    3    4
 
 
 class TagProperty:
@@ -778,6 +890,7 @@ class MayaaCore:
         self.bacgkround_color = MayaaCoreFlag.NOT_DECLARED_ON_INIT
         self.delta_time = MayaaCoreFlag.NOT_DECLARED_ON_INIT
         self.caption = MayaaCoreFlag.NOT_DECLARED_ON_INIT
+
         self.info_tag = InfoTagHandler(self)
         self.scene_manager = MayaaSceneManager(self)
 
@@ -827,8 +940,10 @@ class MayaaCore:
             self.scene_manager.pump_event(event)
             if event.type == pg.QUIT:
                 exit()
+
             if event.type == pg.MOUSEBUTTONDOWN:
                 self.info_tag.inform("Info System", InfoTagLevels.NOTIFY)
+
             if event.type == pg.VIDEORESIZE:
                 self.scene_manager.resize_current_surface()
 
@@ -839,9 +954,12 @@ class MayaaCore:
         ...
 
     def __coreupdate__(self):
+        self.mouse_rel = pg.mouse.get_rel()
+
         if self.perform_late_init:
             self.late_init()
             self.perform_late_init = not self.perform_late_init
+
         self.scene_manager.update()
         self.info_tag.update()
 
