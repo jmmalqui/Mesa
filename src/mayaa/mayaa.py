@@ -334,7 +334,7 @@ class MayaaScene:
         self.manager: MayaaSceneManager = manager
         self.manager.add_scene(self)
         self.container: _MayaaContainer = None
-        self.modals = []  # Fancy word for pop up windows
+        self.modals = []
         self.informer = self.core.info_tag
         self.surface = pg.Surface(self.core.display.get_size())
         self.is_active = False
@@ -344,11 +344,9 @@ class MayaaScene:
         self.background_color = color
 
     def resize(self):
-        # why did I make this method
         self.surface = pg.Surface(self.core.display.get_size())
 
     def update(self):
-        # do your update stuff here
         ...
 
     def update_container(self):
@@ -454,10 +452,10 @@ class _MayaaContainer:
 
     def _compute_elements_surfaces_handle_width_case(self, element):
         if element.parent.type_flag == MayaaRenderFlag.SLIDABLE_CONTAINER_HORIZONTAL:
-            print("here lol")
             return element.parent.width // 2
         if element.parent.type_flag == MayaaRenderFlag.SLIDABLE_CONTAINER_VERTICAL:
             return element.parent.width
+
         if element.width_flag == MayaaRenderFlag.DISPLAY_WIDTH_WINDOW:
             return pg.display.get_window_size()[0]
         if element.width_flag == MayaaRenderFlag.DISPLAY_WIDTH_PARENT:
@@ -523,11 +521,13 @@ class _MayaaContainer:
                 element.compute_elements_surfaces()
 
     def compute_extra_inherit(self):
+        print(f"Element: {self}")
+        print(f"Elements in queue: {self.elements}")
         for element in self.elements:
             element.compute_extra_inherit()
 
     def remake_rendering_tree_from_here(self):
-        print("que", self.__class__.__name__)
+        print(f"remaking tree for {self}")
         self.compute_elements_surfaces()
         self.compute_elements_positions()
         self.compute_extra_inherit()
@@ -623,7 +623,6 @@ class _MayaaContainer:
 
     def __coreupdate__(self):
         if self.should_late_init:
-            print(f"Performing late init in {self.__class__.__name__}")
             self.late_init()
             self.should_late_init = False
         self.update()
@@ -738,21 +737,21 @@ class MayaaStackHorizontal(_MayaaContainer):
 class MayaaSlidablePanel(_MayaaContainer):
     def __init__(self, parent) -> None:
         super().__init__(parent)
-        self.type_flag = MayaaRenderFlag.SLIDABLE_CONTAINER_VERTICAL
+        self.type_flag = MayaaRenderFlag.CORE_CONTAINER
         self.width_flag = MayaaRenderFlag.DISPLAY_WIDTH_PANEL
         self.height_flag = MayaaRenderFlag.DISPLAY_HEIGHT_PANEL
 
     def late_init(self):
-        print(self.surface.get_size(), self.absolute_position)
         return super().late_init()
 
 
-class MayaaSlidablePanelHorizontal(MayaaStackHorizontal):
+class MayaaSlidablePanelVertical(MayaaStackVertical):
     def __init__(self, parent) -> None:
         super().__init__(parent)
-        self.type_flag = MayaaRenderFlag.SLIDABLE_CONTAINER_HORIZONTAL
+        self.type_flag = MayaaRenderFlag.SLIDABLE_CONTAINER_VERTICAL
         self.perform_late_init = True
-        self.slider_width = 5
+        self.slider_height = 5
+        self.slider_color = "black"
         self.handle_get = False
         self.mouse_handle = pg.Vector2(pg.mouse.get_pos())
         self.separator = MayaaCoreFlag.NOT_DECLARED_ON_INIT
@@ -760,24 +759,28 @@ class MayaaSlidablePanelHorizontal(MayaaStackHorizontal):
         self.middle_y = MayaaCoreFlag.NOT_DECLARED_ON_INIT
         self.slider = MayaaCoreFlag.NOT_DECLARED_ON_INIT
 
+    def set_slider_color(self, color):
+        self.slider_color = color
+
     def compute_extra_inherit(self):
         self.remake_slider()
+        for element in self.elements:
+            element.compute_extra_inherit()
 
     def late_init(self):
-        print("width of panel: ", self.width)
         self.remake_slider()
         return super().late_init()
 
     def remake_slider(self):
-        self.middle_x = self.width // 2
-        self.middle_y = 0
+        print("im redone :)", self)
+        self.middle_x = 0
+        self.middle_y = self.height // 2
         self.slider = pg.Rect(
-            self.middle_x - self.slider_width,
-            self.middle_y,
-            self.slider_width,
-            self.height,
+            self.middle_x,
+            self.middle_y - self.slider_height,
+            self.width,
+            self.slider_height,
         )
-        print(self.middle_x)
 
     def inherit_update(self):
         if len(self.elements) == 0:
@@ -787,7 +790,114 @@ class MayaaSlidablePanelHorizontal(MayaaStackHorizontal):
         return super().inherit_update()
 
     def inherit_render(self):
-        pg.draw.rect(self.surface, "white", self.slider, 0)
+        pg.draw.rect(self.surface, self.slider_color, self.slider, 0)
+
+
+class MayaaSlidablePanelHorizontal(MayaaStackHorizontal):
+    def __init__(self, parent) -> None:
+        super().__init__(parent)
+        self.type_flag = MayaaRenderFlag.SLIDABLE_CONTAINER_HORIZONTAL
+        self.perform_late_init = True
+        self.slider_width = 5
+        self.handle_get = False
+        self.slider_color = "black"
+        self.mouse_handle = pg.Vector2(pg.mouse.get_pos())
+        self.separator = MayaaCoreFlag.NOT_DECLARED_ON_INIT
+        self.middle_x = MayaaCoreFlag.NOT_DECLARED_ON_INIT
+        self.middle_y = MayaaCoreFlag.NOT_DECLARED_ON_INIT
+        self.slider = MayaaCoreFlag.NOT_DECLARED_ON_INIT
+
+    def set_slider_color(self, color):
+        self.slider_color = color
+
+    def compute_extra_inherit(self):
+        self.remake_slider()
+        for element in self.elements:
+            element.compute_extra_inherit()
+
+    def late_init(self):
+        self.remake_slider()
+        return super().late_init()
+
+    def remake_slider(self):
+        print("im redone :)", self)
+        self.middle_x = self.width // 2
+        self.middle_y = 0
+        self.slider = pg.Rect(
+            self.middle_x - self.slider_width,
+            self.middle_y,
+            self.slider_width,
+            self.height,
+        )
+
+    def inherit_update(self):
+        if len(self.elements) == 0:
+            raise ValueError("A Slidable Panel must have children elements")
+        if len(self.elements) != 2:
+            raise ValueError(f"Panel must have two children elements")
+        return super().inherit_update()
+
+    def inherit_render(self):
+        pg.draw.rect(self.surface, self.slider_color, self.slider, 0)
+
+
+class MayaaTextLabel(_MayaaContainer):
+    def __init__(self, parent) -> None:
+        super().__init__(parent)
+        self.font_name = MayaaCoreFlag.NOT_DECLARED_ON_INIT
+        self.font = MayaaCoreFlag.NOT_DECLARED_ON_INIT
+        self.font_size = MayaaCoreFlag.NOT_DECLARED_ON_INIT
+        self.text = MayaaCoreFlag.NOT_DECLARED_ON_INIT
+        self.text_surface = MayaaCoreFlag.NOT_DECLARED_ON_INIT
+        self.bold = False
+        self.italic = False
+        self.text_background_color = None
+        self.antialias = True
+        self.text_color = MayaaCoreFlag.NOT_DECLARED_ON_INIT
+
+    def set_text_color(self, color):
+        self.text_color = color
+
+    def set_text_background_color(self, color):
+        self.text_background_color = color
+
+    def unset_antialiasing(self):
+        self.antialias = False
+
+    def set_bold(self):
+        self.bold = True
+
+    def set_italic(self):
+        self.italic = True
+
+    def set_font_name(self, font_name):
+        self.font_name = font_name
+
+    def set_font_size(self, font_size):
+        self.font_size = font_size
+
+    def set_text(self, text):
+        if self.text == MayaaCoreFlag.NOT_DECLARED_ON_INIT:
+            self.text = text
+        if self.text_surface != MayaaCoreFlag.NOT_DECLARED_ON_INIT:
+            if text != self.text:
+                self.text = text
+                self.make_text_surface()
+
+    def make_text_surface(self):
+        self.text_surface = self.font.render(
+            self.text, self.antialias, self.text_color, self.text_background_color
+        )
+
+    def late_init(self):
+        self.font = pg.font.SysFont(
+            self.font_name, self.font_size, self.bold, self.italic
+        )
+        self.make_text_surface()
+        return super().late_init()
+
+    def render(self):
+        self.surface.blit(self.text_surface, [0, 0])
 
 
 class TagProperty:
