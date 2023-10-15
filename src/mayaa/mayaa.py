@@ -5,6 +5,50 @@ import pygame as pg
 from enum import Enum
 
 
+def circle_chop(surface: pg.Surface):
+    radius = min(*surface.get_size()) // 2
+    frame = pg.Surface([radius * 2, radius * 2], pg.SRCALPHA)
+    pg.draw.circle(frame, "white", [radius, radius], radius, 0)
+    return_surface = surface.subsurface(
+        pg.Rect(
+            (pg.Vector2(surface.get_rect().center) - pg.Vector2(radius, radius)),
+            (radius * 2, radius * 2),
+        )
+    ).copy()
+    return_surface.blit(frame, [0, 0], None, pg.BLEND_RGBA_MIN)
+    return return_surface
+
+
+def rounded_border(surface: pg.Surface, border_radius: int):
+    size = surface.get_size()
+    frame = pg.Surface(size, pg.SRCALPHA)
+    pg.draw.rect(frame, "white", pg.Rect(0, 0, *size), 0, border_radius)
+    return_surface = surface.copy()
+    return_surface.blit(frame, [0, 0], None, pg.BLEND_RGBA_MIN)
+    return return_surface
+
+
+def deform(surface: pg.Surface, x: int):
+    pixelarray = pg.surfarray.array3d(surface)
+    width = surface.get_width()
+    height = surface.get_height()
+    new_surf = pg.Surface([width, height + x], pg.SRCALPHA)
+    newpixelarray = pg.surfarray.array3d(new_surf)
+    for i, row in enumerate(pixelarray):
+        space = int(x - (x * i / width))
+        pref = [[0, 0, 0] for a in range(space)]
+        if space == 0:
+            newpixelarray[i][0:height] = pixelarray[i]
+        if space != 0:
+            newpixelarray[i][0:space] = pref
+            newpixelarray[i][space : space + height] = pixelarray[i]
+        if x - space != 0:
+            sub = [[0, 0, 0] for b in range(x - space)]
+            newpixelarray[i][space + height :] = sub
+    pg.surfarray.blit_array(new_surf, newpixelarray)
+    return new_surf
+
+
 def ease_in_sine(x):
     return 1 - math.cos((x * math.pi) / 2)
 
@@ -188,6 +232,11 @@ class MayaaRenderFlag(Enum):
     CORE_CONTAINER = 8
     SLIDABLE_CONTAINER_VERTICAL = 9
     SLIDABLE_CONTAINER_HORIZONTAL = 10
+
+    TEXT_CENTERED_V = 11
+    TEXT_CENTERED_H = 12
+    ELEMENT_CENTERED_V = 13
+    ELEMENT_CENTERED_H = 14
 
 
 class MayaaCoreFlag(Enum):
@@ -421,6 +470,10 @@ class _MayaaContainer:
                 [False, None, None],
             ]
             self.should_late_init = True
+            self.radius = MayaaCoreFlag.NOT_DECLARED_ON_INIT
+
+    def set_rounded_borders(self, radius):
+        self.radius = radius
 
     def late_init(self):
         ...
@@ -515,19 +568,18 @@ class _MayaaContainer:
                 [
                     element.width - 2 * element.margin,
                     element.height - 2 * element.margin,
-                ]
+                ],
+                flags=pg.SRCALPHA,
             )
+
             if isinstance(element, _MayaaContainer):
                 element.compute_elements_surfaces()
 
     def compute_extra_inherit(self):
-        print(f"Element: {self}")
-        print(f"Elements in queue: {self.elements}")
         for element in self.elements:
             element.compute_extra_inherit()
 
     def remake_rendering_tree_from_here(self):
-        print(f"remaking tree for {self}")
         self.compute_elements_surfaces()
         self.compute_elements_positions()
         self.compute_extra_inherit()
@@ -645,6 +697,8 @@ class _MayaaContainer:
         for element in self.elements:
             element.__corerender__()
         self.inherit_render()
+        if self.radius != MayaaCoreFlag.NOT_DECLARED_ON_INIT:
+            self.surface = rounded_border(self.surface, self.radius)
         self.parent.surface.blit(self.surface, self.position)
 
     def render_borders(self):
@@ -841,6 +895,99 @@ class MayaaSlidablePanelHorizontal(MayaaStackHorizontal):
         pg.draw.rect(self.surface, self.slider_color, self.slider, 0)
 
 
+class MayaaImage(_MayaaContainer):
+    def __init__(self, parent) -> None:
+        super().__init__(parent)
+        self.image = MayaaCoreFlag.NOT_DECLARED_ON_INIT
+        self.original_image = MayaaCoreFlag.NOT_DECLARED_ON_INIT
+        self.image_pos = MayaaCoreFlag.NOT_DECLARED_ON_INIT
+        self.element_center_v_flag = MayaaCoreFlag.NOT_DECLARED_ON_INIT
+        self.element_center_h_flag = MayaaCoreFlag.NOT_DECLARED_ON_INIT
+
+    def center_element_vertical(self):
+        self.element_center_v_flag = MayaaRenderFlag.ELEMENT_CENTERED_V
+
+    def center_element_horizontal(self):
+        self.element_center_h_flag = MayaaRenderFlag.ELEMENT_CENTERED_H
+
+    def center_element(self):
+        self.center_element_vertical()
+        self.center_element_horizontal()
+
+    def set_image(self, path):
+        self.image = pg.image.load(path).convert_alpha()
+        self.original_image = self.image.copy()
+
+    def resize_match_parent_height(self):
+        height = self.height
+        width = (
+            self.original_image.get_width() * height / self.original_image.get_height()
+        )
+        self.image = pg.transform.smoothscale(self.original_image, [width, height])
+
+    def resize_match_parent_width(self):
+        width = self.width
+        height = (
+            self.original_image.get_height() * width / self.original_image.get_width()
+        )
+        self.image = pg.transform.smoothscale(self.original_image, [width, height])
+
+    def render(self):
+        self.image_pos = pg.Vector2(0, 0)
+        if self.element_center_v_flag == MayaaRenderFlag.ELEMENT_CENTERED_V:
+            self.image_pos.y = (self.height - self.image.get_height()) // 2
+
+        if self.element_center_h_flag == MayaaRenderFlag.ELEMENT_CENTERED_H:
+            self.image_pos.x = (self.width - self.image.get_width()) // 2
+        self.surface.blit(self.image, self.image_pos)
+
+
+class MayaaSingleContainer(_MayaaContainer):
+    def __init__(self, parent) -> None:
+        super().__init__(parent)
+        self.element_center_v_flag = MayaaCoreFlag.NOT_DECLARED_ON_INIT
+        self.element_center_h_flag = MayaaCoreFlag.NOT_DECLARED_ON_INIT
+
+    def center_element_vertical(self):
+        self.element_center_v_flag = MayaaRenderFlag.ELEMENT_CENTERED_V
+
+    def center_element_horizontal(self):
+        self.element_center_h_flag = MayaaRenderFlag.ELEMENT_CENTERED_H
+
+    def center_element(self):
+        self.center_element_vertical()
+        self.center_element_horizontal()
+
+    def compute_elements_positions(self):
+        if len(self.elements) != 1:
+            raise ValueError(
+                f"MayaSingleContainer can only handle one children container, you may have added more than two or not added any.  Num of Children: {len(self.elements)}"
+            )
+        element: _MayaaContainer = self.elements[0]
+        if self.element_center_v_flag == MayaaRenderFlag.ELEMENT_CENTERED_V:
+            element.position.y = (self.height - element.surface.get_height()) // 2
+
+            element.absolute_position.y = self.absolute_position.y + element.position.y
+            element.rect = pg.Rect(
+                element.absolute_position, element.surface.get_size()
+            )
+        if self.element_center_h_flag == MayaaRenderFlag.ELEMENT_CENTERED_H:
+            element.position.x = (self.width - element.surface.get_width()) // 2
+            element.absolute_position.x = self.absolute_position.x + element.position.x
+
+            element.rect = pg.Rect(
+                element.absolute_position, element.surface.get_size()
+            )
+        return super().compute_elements_positions()
+
+    def late_init(self):
+        if len(self.elements) != 1:
+            raise ValueError(
+                "MayaSingleContainer can only handle one children container"
+            )
+        return super().late_init()
+
+
 class MayaaTextLabel(_MayaaContainer):
     def __init__(self, parent) -> None:
         super().__init__(parent)
@@ -854,9 +1001,26 @@ class MayaaTextLabel(_MayaaContainer):
         self.text_background_color = None
         self.antialias = True
         self.text_color = MayaaCoreFlag.NOT_DECLARED_ON_INIT
+        self.text_center_v_flag = MayaaCoreFlag.NOT_DECLARED_ON_INIT
+        self.text_center_h_flag = MayaaCoreFlag.NOT_DECLARED_ON_INIT
 
-    def set_text_color(self, color):
-        self.text_color = color
+    def center_text_vertical(self):
+        self.text_center_v_flag = MayaaRenderFlag.TEXT_CENTERED_V
+
+    def center_text_horizontal(self):
+        self.text_center_h_flag = MayaaRenderFlag.TEXT_CENTERED_H
+
+    def center_text(self):
+        self.center_text_horizontal()
+        self.center_text_vertical()
+
+    def set_text_color(self, text_color):
+        if self.text_color == MayaaCoreFlag.NOT_DECLARED_ON_INIT:
+            self.text_color = text_color
+        if self.text_surface != MayaaCoreFlag.NOT_DECLARED_ON_INIT:
+            if text_color != self.text_color:
+                self.text_color = text_color
+                self.make_text_surface()
 
     def set_text_background_color(self, color):
         self.text_background_color = color
@@ -897,7 +1061,14 @@ class MayaaTextLabel(_MayaaContainer):
         return super().late_init()
 
     def render(self):
-        self.surface.blit(self.text_surface, [0, 0])
+        self.text_position = pg.Vector2(0, 0)
+        if self.text_center_v_flag == MayaaRenderFlag.TEXT_CENTERED_V:
+            self.text_position.y = (self.height - self.text_surface.get_height()) // 2
+
+        if self.text_center_h_flag == MayaaRenderFlag.TEXT_CENTERED_H:
+            self.text_position.x = (self.width - self.text_surface.get_width()) // 2
+
+        self.surface.blit(self.text_surface, self.text_position)
 
 
 class TagProperty:
@@ -1065,7 +1236,8 @@ class MayaaCore:
                 exit()
 
             if event.type == pg.MOUSEBUTTONDOWN:
-                self.info_tag.inform("Info System", InfoTagLevels.NOTIFY)
+                ...
+                # self.info_tag.inform("Info System", InfoTagLevels.NOTIFY)
 
             if event.type == pg.VIDEORESIZE:
                 self.scene_manager.resize_current_surface()
