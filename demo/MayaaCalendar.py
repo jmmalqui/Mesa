@@ -188,10 +188,10 @@ class DayShower(mayaa.MayaaStackVertical):
         count = 1
         for j in range(6):
             list = []
-            idontknowhowtonamethisvariable = begin_day % 7
+            begin_day_mod_7 = begin_day % 7
             for i in range(7):
                 if j == 0:
-                    if i < idontknowhowtonamethisvariable:
+                    if i < begin_day_mod_7:
                         list.append("x")
                     else:
                         list.append(str(count))
@@ -318,24 +318,33 @@ class CardShower(mayaa.MayaaSingleContainer):
         self.add_element(self.card)
 
 
-class CardDescriptor(mayaa.MayaaStackVertical):
+class CardDescriptor(mayaa.MayaaSingleContainer):
     def __init__(self, parent) -> None:
         super().__init__(parent)
         self.set_height_as_parent()
         self.set_width_as_remaining_area()
         self.set_background_color(Colors.BACKGROUND)
         self.workspace = self.parent
+        self.button = mayaa.MayaaButtonText(self)
+        self.button.set_fixed_height(40)
+        self.button.set_fixed_width(100)
+        self.button.set_background_color("orange")
+        self.button.set_signal(self.inf)
+        self.center_element()
+        self.add_element(self.button)
+
+    def inf(self):
+        self.scene.informer.inform("button press")
 
 
-class Workspace(mayaa.MayaaStackHorizontal):
+class Workspace(mayaa.MayaaSingleContainer):
     def __init__(self, parent) -> None:
         super().__init__(parent)
         self.set_height_as_remaining_area()
         self.set_width_as_parent()
         self.set_background_color(Colors.BACKGROUND)
         self.card_shower = CardShower(self)
-        self.card_descriptor = CardDescriptor(self)
-        self.add_element(self.card_descriptor)
+        self.center_element()
         self.add_element(self.card_shower)
 
 
@@ -360,7 +369,7 @@ class CalendarApp(mayaa.MayaaCore):
         super().__init__()
         self.set_application_name("Calendar")
         self.set_rendering_flags(mayaa.pg.RESIZABLE)
-        self.set_display_size(1200, 800)
+        self.set_display_size(800, 500)
         self.set_background_color(mayaa.MayaaColors.ALICEWHITE)
         self.set_clock(60)
         self.main_scene = MainScene(self, "mainscene", self.scene_manager)

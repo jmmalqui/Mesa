@@ -1,0 +1,5 @@
+{"products":[
+    { "path":"demo\\res\\computer.jpeg", "brand":"Microsoft", "name":"Surface Laptop GO2" },
+    { "path":"demo\\res\\computer2.jpeg", "brand":"Windows", "name":"Surface Laptop GO2" },
+    { "path":"demo\\res\\computer3.jpeg", "brand":"Microsoft", "name":"Surface Laptop GO2"}
+  ]}

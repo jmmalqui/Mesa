@@ -337,6 +337,7 @@ class MayaaSceneManager:
 
     def set_init_scene(self, scene_name):
         self.current_scene_name = scene_name
+        print(self.current_scene_name)
 
     def get_events(self):
         return self.events
@@ -471,6 +472,11 @@ class _MayaaContainer:
             ]
             self.should_late_init = True
             self.radius = MayaaCoreFlag.NOT_DECLARED_ON_INIT
+            self.debug_color = [
+                random.randint(0, 255),
+                random.randint(0, 255),
+                random.randint(0, 255),
+            ]
 
     def set_rounded_borders(self, radius):
         self.radius = radius
@@ -699,7 +705,21 @@ class _MayaaContainer:
         self.inherit_render()
         if self.radius != MayaaCoreFlag.NOT_DECLARED_ON_INIT:
             self.surface = rounded_border(self.surface, self.radius)
-        self.parent.surface.blit(self.surface, self.position)
+        if self.scene.core.on_debug == False:
+            self.surface.set_alpha(255)
+
+            self.parent.surface.blit(self.surface, self.position)
+        else:
+            thick = 2
+
+            pg.draw.rect(
+                self.surface,
+                self.debug_color,
+                self.surface.get_rect(),
+                thick,
+            )
+
+            self.parent.surface.blit(self.surface, self.position)
 
     def render_borders(self):
         for index, border in enumerate(self.borders):
@@ -918,6 +938,9 @@ class MayaaImage(_MayaaContainer):
         self.image = pg.image.load(path).convert_alpha()
         self.original_image = self.image.copy()
 
+    def resize_image(self, size):
+        self.image = pg.transform.smoothscale(self.original_image, size)
+
     def resize_match_parent_height(self):
         height = self.height
         width = (
@@ -988,6 +1011,42 @@ class MayaaSingleContainer(_MayaaContainer):
         return super().late_init()
 
 
+class MayaaButtonText(MayaaSingleContainer):
+    def __init__(self, parent) -> None:
+        super().__init__(parent)
+        self.signal = MayaaCoreFlag.NOT_DECLARED_ON_INIT
+        self.text = MayaaTextLabel(self)
+        self.set_color_as_parent()
+        self.text.set_width_as_parent()
+        self.text.set_height_as_parent()
+        self.text.set_text("Button")
+        self.text.set_text_color("black")
+        self.text.set_font_name("meiryoui")
+        self.text.set_font_size(12)
+        self.text.center_text()
+        self.text.set_color_as_parent()
+        self.center_element()
+        self.add_element(self.text)
+
+    def set_signal(self, func):
+        self.signal = func
+
+    def handle_events(self):
+        for event in self.scene.manager.get_events():
+            if event.type == pg.MOUSEBUTTONDOWN and self.is_container_hovered():
+                # self.signal()
+                self.scene.informer.inform("button clicked")
+
+    def inherit_update(self):
+        self.handle_events()
+
+        return super().inherit_update()
+
+    def inherit_render(self):
+        pg.draw.rect(self.scene.core.display, "red", self.text.surface.get_rect(), 2)
+        return super().inherit_render()
+
+
 class MayaaTextLabel(_MayaaContainer):
     def __init__(self, parent) -> None:
         super().__init__(parent)
@@ -1038,7 +1097,15 @@ class MayaaTextLabel(_MayaaContainer):
         self.font_name = font_name
 
     def set_font_size(self, font_size):
-        self.font_size = font_size
+        if self.font_size == MayaaCoreFlag.NOT_DECLARED_ON_INIT:
+            self.font_size = font_size
+        if self.font_size != MayaaCoreFlag.NOT_DECLARED_ON_INIT:
+            if font_size != self.font_size:
+                self.font_size = font_size
+                self.font = pg.font.SysFont(
+                    self.font_name, self.font_size, self.bold, self.italic
+                )
+                self.make_text_surface()
 
     def set_text(self, text):
         if self.text == MayaaCoreFlag.NOT_DECLARED_ON_INIT:
@@ -1187,6 +1254,7 @@ class MayaaCore:
 
         self.info_tag = InfoTagHandler(self)
         self.scene_manager = MayaaSceneManager(self)
+        self.on_debug = False
 
     def set_application_name(self, title):
         self.caption = title
@@ -1235,6 +1303,9 @@ class MayaaCore:
             if event.type == pg.QUIT:
                 exit()
 
+            if event.type == pg.KEYDOWN:
+                if event.key == pg.K_TAB:
+                    self.on_debug = not self.on_debug
             if event.type == pg.MOUSEBUTTONDOWN:
                 ...
                 # self.info_tag.inform("Info System", InfoTagLevels.NOTIFY)
@@ -1266,7 +1337,7 @@ class MayaaCore:
         self.scene_manager.render()
         self.info_tag.render()
 
-        self.render()
+        # self.render()
         pg.display.flip()
 
     def make_clock(self):
