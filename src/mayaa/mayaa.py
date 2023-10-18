@@ -462,7 +462,10 @@ class MayaaScene:
         self.background_color = color
 
     def resize(self):
-        self.surface = pg.Surface(self.core.display.get_size())
+        self.surface = pg.Surface(pg.display.get_window_size())
+        self.container.set_size_as_display()
+        self.container.set_position_as_core()
+        self.container.remake_rendering_tree_from_here()
 
     def update(self):
         ...
@@ -992,6 +995,10 @@ class MayaaImage(_MayaaContainer):
         self.element_center_v_flag = MayaaCoreFlag.NOT_DECLARED_ON_INIT
         self.element_center_h_flag = MayaaCoreFlag.NOT_DECLARED_ON_INIT
 
+    def border_image(self):
+        self.image = circle_chop(self.image)
+        self.original_image = self.image.copy()
+
     def center_element_vertical(self):
         self.element_center_v_flag = MayaaRenderFlag.ELEMENT_CENTERED_V
 
@@ -1003,17 +1010,24 @@ class MayaaImage(_MayaaContainer):
         self.center_element_horizontal()
 
     def set_image(self, path):
-        self.image = pg.image.load(path).convert_alpha()
-        self.original_image = self.image.copy()
+        if path == None:
+            self.image = None
+            self.original_image = None
+        else:
+            self.image = pg.image.load(path).convert_alpha()
+            self.original_image = self.image.copy()
 
     def resize_image(self, size):
         self.image = pg.transform.smoothscale(self.original_image, size)
 
     def resize_match_parent_height(self):
         height = self.height
+        print(height)
         width = (
             self.original_image.get_width() * height / self.original_image.get_height()
         )
+        print(width, height)
+        print(self.image.get_size(), self.original_image.copy())
         self.image = pg.transform.smoothscale(self.original_image, [width, height])
 
     def resize_match_parent_width(self):
@@ -1030,7 +1044,10 @@ class MayaaImage(_MayaaContainer):
 
         if self.element_center_h_flag == MayaaRenderFlag.ELEMENT_CENTERED_H:
             self.image_pos.x = (self.width - self.image.get_width()) // 2
-        self.surface.blit(self.image, self.image_pos)
+        if self.image != None:
+            self.surface.blit(self.image, self.image_pos)
+        else:
+            self.surface.fill("black")
 
 
 class MayaaSingleContainer(_MayaaContainer):
@@ -1077,42 +1094,6 @@ class MayaaSingleContainer(_MayaaContainer):
                 "MayaSingleContainer can only handle one children container"
             )
         return super().late_init()
-
-
-class MayaaButtonText(MayaaSingleContainer):
-    def __init__(self, parent) -> None:
-        super().__init__(parent)
-        self.signal = MayaaCoreFlag.NOT_DECLARED_ON_INIT
-        self.text = MayaaTextLabel(self)
-        self.set_color_as_parent()
-        self.text.set_width_as_parent()
-        self.text.set_height_as_parent()
-        self.text.set_text("Button")
-        self.text.set_text_color("black")
-        self.text.set_font_name("meiryoui")
-        self.text.set_font_size(12)
-        self.text.center_text()
-        self.text.set_color_as_parent()
-        self.center_element()
-        self.add_element(self.text)
-
-    def set_signal(self, func):
-        self.signal = func
-
-    def handle_events(self):
-        for event in self.scene.manager.get_events():
-            if event.type == pg.MOUSEBUTTONDOWN and self.is_container_hovered():
-                # self.signal()
-                self.scene.informer.inform("button clicked")
-
-    def inherit_update(self):
-        self.handle_events()
-
-        return super().inherit_update()
-
-    def inherit_render(self):
-        pg.draw.rect(self.scene.core.display, "red", self.text.surface.get_rect(), 2)
-        return super().inherit_render()
 
 
 class TextBox(_MayaaContainer):
@@ -1357,6 +1338,30 @@ class MayaaTextLabel(_MayaaContainer):
         self.surface.blit(self.text_surface, self.text_position)
 
 
+class MayaaButtonText(MayaaTextLabel):
+    def __init__(self, parent) -> None:
+        super().__init__(parent)
+        self.signal = MayaaCoreFlag.NOT_DECLARED_ON_INIT
+        self.set_color_as_parent()
+        self.callback_result = None
+
+    def get_result(self):
+        return self.callback_result
+
+    def set_signal(self, func):
+        self.signal = func
+
+    def handle_events(self):
+        for event in self.scene.manager.get_events():
+            if event.type == pg.MOUSEBUTTONDOWN and self.is_container_hovered():
+                self.callback_result = self.signal()
+
+    def inherit_update(self):
+        self.handle_events()
+
+        return super().inherit_update()
+
+
 class TagProperty:
     def __init__(self, fill, border, ttl) -> None:
         self.fill = fill
@@ -1531,6 +1536,7 @@ class MayaaCore:
 
             if event.type == pg.VIDEORESIZE:
                 self.scene_manager.resize_current_surface()
+                self.scene_manager.update_scene_sizes()
 
     def set_background_color(self, color):
         self.bacgkround_color = color
