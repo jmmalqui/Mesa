@@ -5,6 +5,35 @@ import pygame as pg
 from enum import Enum
 
 
+def color_lerp(c1, c2, val, max):
+    c1 = pg.Vector3(c1)
+    c2 = pg.Vector3(c2)
+    diff = c2 - c1
+    step = diff / max
+    return c1 + step * val
+
+
+def color_picker(color, size=100, step=10):
+    surface = pg.Surface([size, size])
+    left_color = []
+    color_per_row = int(size // step)
+    for i in range(color_per_row):
+        left_color.append(color_lerp([255, 255, 255], [0, 0, 0], i, color_per_row))
+    right_color = []
+    for i in range(color_per_row):
+        right_color.append(color_lerp(color, [0, 0, 0], i, color_per_row))
+    for y in range(color_per_row):
+        for x in range(color_per_row):
+            pg.draw.rect(
+                surface,
+                color_lerp(left_color[y], right_color[y], x, color_per_row),
+                pg.Rect(step * x, step * y, step, step),
+                0,
+            )
+    pg.draw.rect(surface, "white", surface.get_rect(), 1)
+    return surface
+
+
 def circle_chop(surface: pg.Surface):
     radius = min(*surface.get_size()) // 2
     frame = pg.Surface([radius * 2, radius * 2], pg.SRCALPHA)
@@ -272,6 +301,45 @@ class MayaaAnimationCurves:
     EASE_IN_OUT_BACK = ease_in_out_back
     EASE_IN_ELASTIC = ease_in_elastic
     EASE_OUT_ELASTIC = ease_out_elastic
+
+
+class TextBuffer:
+    def __init__(self) -> None:
+        self.buffer = ""
+        self.pointer = 0
+
+    def shift_left(self):
+        if self.pointer != 0:
+            self.pointer -= 1
+
+    def shift_right(self):
+        if self.pointer != len(self.buffer):
+            self.pointer += 1
+
+    def add(self, char):
+        if self.pointer == 0:
+            self.buffer = char + self.buffer
+        elif self.pointer == len(self.buffer):
+            self.buffer = self.buffer + char
+        else:
+            self.left_part = self.buffer[: self.pointer]
+
+            self.right_part = self.buffer[self.pointer :]
+            self.buffer = self.left_part + char + self.right_part
+
+    def pop(self):
+        if self.pointer == len(self.buffer):
+            self.buffer = self.buffer[:-1]
+        else:
+            self.left_part = self.buffer[: self.pointer - 1]
+
+            self.right_part = self.buffer[self.pointer :]
+            self.buffer = self.left_part + self.right_part
+        self.shift_left()
+
+    def delete(self):
+        self.buffer = ""
+        self.pointer = 0
 
 
 class Animation:
@@ -1045,6 +1113,157 @@ class MayaaButtonText(MayaaSingleContainer):
     def inherit_render(self):
         pg.draw.rect(self.scene.core.display, "red", self.text.surface.get_rect(), 2)
         return super().inherit_render()
+
+
+class TextBox(_MayaaContainer):
+    def __init__(self, parent) -> None:
+        super().__init__(parent)
+        self.font_name = MayaaCoreFlag.NOT_DECLARED_ON_INIT
+        self.font = MayaaCoreFlag.NOT_DECLARED_ON_INIT
+        self.font_size = MayaaCoreFlag.NOT_DECLARED_ON_INIT
+        self.text = ""
+        self.text_surface = MayaaCoreFlag.NOT_DECLARED_ON_INIT
+        self.bold = False
+        self.italic = False
+        self.text_background_color = None
+        self.antialias = True
+        self.text_color = MayaaCoreFlag.NOT_DECLARED_ON_INIT
+        self.buffer = TextBuffer()
+        self.text_center_v_flag = MayaaCoreFlag.NOT_DECLARED_ON_INIT
+        self.text_center_h_flag = MayaaCoreFlag.NOT_DECLARED_ON_INIT
+        self.metrics = []
+        self.pointer_position = self.get_pointer_position()
+        self.blink = False
+        self.tick = 0
+
+    def get_pointer_position(self):
+        return (sum([x[4] for x in self.metrics[: self.buffer.pointer]]),)
+
+    def handle_events(self):
+        for event in self.scene.manager.get_events():
+            if event.type == pg.TEXTINPUT:
+                self.buffer.add(event.text)
+                self.text = self.buffer.buffer
+                self.make_text_surface()
+                self.buffer.shift_right()
+                self.metrics = pg.Font.metrics(self.font, self.text)
+                self.pointer_position = self.get_pointer_position()
+
+            if event.type == pg.TEXTEDITING:
+                self.scene.informer.inform(f"{event}")
+            if event.type == pg.KEYDOWN:
+                if event.key == pg.K_TAB:
+                    self.buffer.delete()
+                    self.text = self.buffer.buffer
+                    self.make_text_surface()
+                    self.metrics = pg.Font.metrics(self.font, self.text)
+                    self.pointer_position = self.get_pointer_position()
+                if event.key == 8:
+                    self.buffer.pop()
+                    self.text = self.buffer.buffer
+                    self.make_text_surface()
+                    self.metrics = pg.Font.metrics(self.font, self.text)
+                    self.pointer_position = self.get_pointer_position()
+                if event.key == pg.K_LEFT:
+                    self.buffer.shift_left()
+                    self.pointer_position = self.get_pointer_position()
+                if event.key == pg.K_RIGHT:
+                    self.buffer.shift_right()
+
+                    self.pointer_position = self.get_pointer_position()
+                if event.key == pg.K_RETURN:
+                    self.text += "\n"
+                    self.make_text_surface()
+                    self.metrics = pg.Font.metrics(self.font, self.text)
+                    self.pointer_position = self.get_pointer_position()
+
+    def set_text_color(self, text_color):
+        if self.text_color == MayaaCoreFlag.NOT_DECLARED_ON_INIT:
+            self.text_color = text_color
+        if self.text_surface != MayaaCoreFlag.NOT_DECLARED_ON_INIT:
+            if text_color != self.text_color:
+                self.text_color = text_color
+                self.make_text_surface()
+
+    def set_text_background_color(self, color):
+        self.text_background_color = color
+
+    def unset_antialiasing(self):
+        self.antialias = False
+
+    def set_bold(self):
+        self.bold = True
+
+    def set_italic(self):
+        self.italic = True
+
+    def set_font_name(self, font_name):
+        self.font_name = font_name
+
+    def set_font_size(self, font_size):
+        if self.font_size == MayaaCoreFlag.NOT_DECLARED_ON_INIT:
+            self.font_size = font_size
+        if self.font_size != MayaaCoreFlag.NOT_DECLARED_ON_INIT:
+            if font_size != self.font_size:
+                self.font_size = font_size
+                self.font = pg.font.SysFont(
+                    self.font_name, self.font_size, self.bold, self.italic
+                )
+                self.make_text_surface()
+
+    def set_text(self, text):
+        if self.text == MayaaCoreFlag.NOT_DECLARED_ON_INIT:
+            self.text = text
+        if self.text_surface != MayaaCoreFlag.NOT_DECLARED_ON_INIT:
+            if text != self.text:
+                self.text = text
+                self.make_text_surface()
+
+    def make_text_surface(self):
+        "called"
+        self.text_surface = self.font.render(
+            self.text,
+            self.antialias,
+            self.text_color,
+            self.text_background_color,
+        )
+
+    def late_init(self):
+        self.font = pg.font.SysFont(
+            self.font_name, self.font_size, self.bold, self.italic
+        )
+        self.make_text_surface()
+        return super().late_init()
+
+    def inherit_update(self):
+        self.tick += 1
+        self.handle_events()
+        return super().inherit_update()
+
+    def render(self):
+        self.text_position = pg.Vector2(0, 0)
+        if self.text_center_v_flag == MayaaRenderFlag.TEXT_CENTERED_V:
+            self.text_position.y = (self.height - self.text_surface.get_height()) // 2
+
+        if self.text_center_h_flag == MayaaRenderFlag.TEXT_CENTERED_H:
+            self.text_position.x = (self.width - self.text_surface.get_width()) // 2
+        if self.tick % 5 == 0:
+            self.blink = not self.blink
+        if self.blink:
+            pg.draw.rect(
+                self.surface,
+                "cyan",
+                [self.pointer_position[0], 0, 2, 24],
+                0,
+            )
+        else:
+            pg.draw.rect(
+                self.surface,
+                "black",
+                [self.pointer_position[0], 0, 2, 24],
+                0,
+            )
+        self.surface.blit(self.text_surface, self.text_position)
 
 
 class MayaaTextLabel(_MayaaContainer):

@@ -325,27 +325,31 @@ class CardDescriptor(mayaa.MayaaSingleContainer):
         self.set_width_as_remaining_area()
         self.set_background_color(Colors.BACKGROUND)
         self.workspace = self.parent
-        self.button = mayaa.MayaaButtonText(self)
-        self.button.set_fixed_height(40)
-        self.button.set_fixed_width(100)
-        self.button.set_background_color("orange")
-        self.button.set_signal(self.inf)
-        self.center_element()
-        self.add_element(self.button)
+        self.textbox = mayaa.TextBox(self)
+        self.textbox.set_fixed_height(40)
+        self.textbox.set_width_as_parent()
+        self.textbox.set_background_color("black")
+        self.textbox.set_font_name("meiryoui")
+        self.textbox.set_font_size(20)
+
+        self.textbox.set_text_color("white")
+
+        self.center_element_horizontal()
+        self.add_element(self.textbox)
 
     def inf(self):
         self.scene.informer.inform("button press")
 
 
-class Workspace(mayaa.MayaaSingleContainer):
+class Workspace(mayaa.MayaaStackHorizontal):
     def __init__(self, parent) -> None:
         super().__init__(parent)
         self.set_height_as_remaining_area()
         self.set_width_as_parent()
         self.set_background_color(Colors.BACKGROUND)
         self.card_shower = CardShower(self)
-        self.center_element()
-        self.add_element(self.card_shower)
+        self.descriptor = CardDescriptor(self)
+        self.add_element(self.descriptor)
 
 
 class MainScene(mayaa.MayaaScene):
