@@ -3,6 +3,9 @@ import random
 from typing import Dict, Union
 import pygame as pg
 from enum import Enum
+import os
+
+os.environ["SDL_IME_SHOW_UI"] = "1"
 
 
 def color_lerp(c1, c2, val, max):
@@ -266,6 +269,9 @@ class MayaaRenderFlag(Enum):
     TEXT_CENTERED_H = 12
     ELEMENT_CENTERED_V = 13
     ELEMENT_CENTERED_H = 14
+
+    IMAGE_CENTERED_V = 15
+    IMAGE_CENTERED_H = 16
 
 
 class MayaaCoreFlag(Enum):
@@ -1055,6 +1061,46 @@ class MayaaSingleContainer(_MayaaContainer):
         super().__init__(parent)
         self.element_center_v_flag = MayaaCoreFlag.NOT_DECLARED_ON_INIT
         self.element_center_h_flag = MayaaCoreFlag.NOT_DECLARED_ON_INIT
+        self.image = MayaaCoreFlag.NOT_DECLARED_ON_INIT
+        self.original_image = MayaaCoreFlag.NOT_DECLARED_ON_INIT
+        self.image_pos = MayaaCoreFlag.NOT_DECLARED_ON_INIT
+        self.image_center_v_flag = MayaaCoreFlag.NOT_DECLARED_ON_INIT
+        self.image_center_h_flag = MayaaCoreFlag.NOT_DECLARED_ON_INIT
+
+    def set_background_image(self, path):
+        if path == None:
+            self.image = None
+            self.original_image = None
+        else:
+            self.image = pg.image.load(path).convert_alpha()
+            self.image = pg.transform.box_blur(self.image, 10)
+            self.original_image = self.image.copy()
+
+    def center_image_vertical(self):
+        self.image_center_v_flag = MayaaRenderFlag.IMAGE_CENTERED_V
+
+    def center_image_horizontal(self):
+        self.image_center_h_flag = MayaaRenderFlag.IMAGE_CENTERED_H
+
+    def center_image(self):
+        self.center_image_vertical()
+        self.center_image_horizontal()
+
+    def resize_match_parent_height(self):
+        height = self.height
+        print(height)
+        width = (
+            self.original_image.get_width() * height / self.original_image.get_height()
+        )
+
+        self.image = pg.transform.smoothscale(self.original_image, [width, height])
+
+    def resize_match_parent_width(self):
+        width = self.width
+        height = (
+            self.original_image.get_height() * width / self.original_image.get_width()
+        )
+        self.image = pg.transform.smoothscale(self.original_image, [width, height])
 
     def center_element_vertical(self):
         self.element_center_v_flag = MayaaRenderFlag.ELEMENT_CENTERED_V
@@ -1095,6 +1141,15 @@ class MayaaSingleContainer(_MayaaContainer):
             )
         return super().late_init()
 
+    def render(self):
+        self.image_pos = pg.Vector2(0, 0)
+        if self.image_center_v_flag == MayaaRenderFlag.IMAGE_CENTERED_V:
+            self.image_pos.y = (self.height - self.image.get_height()) // 2
+        if self.image_center_h_flag == MayaaRenderFlag.IMAGE_CENTERED_H:
+            self.image_pos.x = (self.width - self.image.get_width()) // 2
+        if self.image != MayaaCoreFlag.NOT_DECLARED_ON_INIT:
+            self.surface.blit(self.image, self.image_pos)
+
 
 class TextBox(_MayaaContainer):
     def __init__(self, parent) -> None:
@@ -1130,8 +1185,6 @@ class TextBox(_MayaaContainer):
                 self.metrics = pg.Font.metrics(self.font, self.text)
                 self.pointer_position = self.get_pointer_position()
 
-            if event.type == pg.TEXTEDITING:
-                self.scene.informer.inform(f"{event}")
             if event.type == pg.KEYDOWN:
                 if event.key == pg.K_TAB:
                     self.buffer.delete()
@@ -1214,6 +1267,7 @@ class TextBox(_MayaaContainer):
             self.font_name, self.font_size, self.bold, self.italic
         )
         self.make_text_surface()
+        pg.key.set_text_input_rect(self.rect)
         return super().late_init()
 
     def inherit_update(self):
