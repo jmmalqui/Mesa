@@ -440,7 +440,7 @@ class MayaaSceneManager:
             self.current_scene.surface = pg.Surface(pg.display.get_window_size())
             self.current_scene.container.set_size_as_display()
             self.current_scene.container.set_position_as_core()
-            self.current_scene.container.remake_rendering_tree_from_here()
+            self.current_scene.container.build()
 
     def update(self):
         self.update_scene_ids()
@@ -471,7 +471,7 @@ class MayaaScene:
         self.surface = pg.Surface(pg.display.get_window_size())
         self.container.set_size_as_display()
         self.container.set_position_as_core()
-        self.container.remake_rendering_tree_from_here()
+        self.container.build()
 
     def update(self):
         ...
@@ -662,7 +662,7 @@ class _MayaaContainer:
         for element in self.elements:
             element.compute_extra_inherit()
 
-    def remake_rendering_tree_from_here(self):
+    def build(self):
         self.compute_elements_surfaces()
         self.compute_elements_positions()
         self.compute_extra_inherit()
@@ -735,6 +735,10 @@ class _MayaaContainer:
 
     def set_width_as_parent(self):
         self.width_flag = MayaaRenderFlag.DISPLAY_WIDTH_PARENT
+
+    def cover_parent_surface(self):
+        self.set_height_as_parent()
+        self.set_width_as_parent()
 
     def set_fixed_width(self, value):
         self.width = value
@@ -1151,7 +1155,7 @@ class MayaaSingleContainer(_MayaaContainer):
             self.surface.blit(self.image, self.image_pos)
 
 
-class TextBox(_MayaaContainer):
+class MayaaTextBox(_MayaaContainer):
     def __init__(self, parent) -> None:
         super().__init__(parent)
         self.font_name = MayaaCoreFlag.NOT_DECLARED_ON_INIT
@@ -1171,6 +1175,9 @@ class TextBox(_MayaaContainer):
         self.pointer_position = self.get_pointer_position()
         self.blink = False
         self.tick = 0
+
+    def get_input(self):
+        return self.buffer
 
     def get_pointer_position(self):
         return (sum([x[4] for x in self.metrics[: self.buffer.pointer]]),)
@@ -1615,8 +1622,7 @@ class MayaaCore:
         self.display.fill(self.bacgkround_color)
         self.scene_manager.render()
         self.info_tag.render()
-
-        # self.render()
+        self.render()
         pg.display.flip()
 
     def make_clock(self):

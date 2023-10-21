@@ -63,7 +63,7 @@ class DirectoryContainer(mayaa.MayaaStackVertical):
                     self.elements = self.original_elements
                     self.set_fixed_height(20)
                     self.root.set_fixed_height(20 * (self.original_dirnum))
-                self.root.parent.remake_rendering_tree_from_here()
+                self.root.parent.build()
 
         if self.open:
             self.head.text.set_text_color("yellow")
@@ -206,7 +206,7 @@ class SliderDemo(mayaa.MayaaScene):
         self.workspace.add_element(self.double_panel)
         self.container.add_element(self.workspace)
 
-        self.container.remake_rendering_tree_from_here()
+        self.container.build()
 
         self.tick = 0
 

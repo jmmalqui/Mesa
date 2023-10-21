@@ -181,7 +181,7 @@ class ProductShowScene(MayaaScene):
         self.container.add_element(self.header)
         self.container.add_element(self.shower)
         self.container.add_element(self.footer)
-        self.container.remake_rendering_tree_from_here()
+        self.container.build()
 
 
 class EntryScene(MayaaScene):
@@ -204,7 +204,7 @@ class EntryScene(MayaaScene):
         self.app_title.set_background_color("white")
         self.container.add_element(self.app_title)
         self.container.center_element()
-        self.container.remake_rendering_tree_from_here()
+        self.container.build()
         self.tick = 0
         self.anim = Animation()
         self.extend = AnimVal(self.anim, 0)
@@ -217,7 +217,7 @@ class EntryScene(MayaaScene):
         self.app_title.set_fixed_height(100 + self.extend.value)
         self.app_title.set_fixed_width(300 + self.extend.value)
         self.app_title.set_font_size(25 + int(self.extend.value // 2.7))
-        self.container.remake_rendering_tree_from_here()
+        self.container.build()
         if self.tick == 60:
             self.manager.go_to("productshow")
 

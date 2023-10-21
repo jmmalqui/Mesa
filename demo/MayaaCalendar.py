@@ -325,7 +325,7 @@ class CardDescriptor(mayaa.MayaaSingleContainer):
         self.set_width_as_remaining_area()
         self.set_background_color(Colors.BACKGROUND)
         self.workspace = self.parent
-        self.textbox = mayaa.TextBox(self)
+        self.textbox = mayaa.MayaaTextBox(self)
         self.textbox.set_fixed_height(40)
         self.textbox.set_width_as_parent()
         self.textbox.set_background_color("black")
@@ -365,7 +365,7 @@ class MainScene(mayaa.MayaaScene):
         self.container.add_element(self.title_bar)
         self.container.add_element(self.workspace)
 
-        self.container.remake_rendering_tree_from_here()
+        self.container.build()
 
 
 class CalendarApp(mayaa.MayaaCore):
