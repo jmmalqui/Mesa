@@ -1,6 +1,10 @@
-# Mesa
+# Mesa dev0.0.0
 
 Develop applications with ease, without the hassle of dealing with pre-defined styles. Total control down to the pixel.
+
+## Caution
+
+Mesa is still on early development, thus, untested and undefined behaviour may appear.
 
 ## Get Started
 
