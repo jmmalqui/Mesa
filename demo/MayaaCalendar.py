@@ -76,7 +76,7 @@ class TitleBar(mayaa.MayaaStackHorizontal):
         return datetime.datetime.today().strftime("%Y-%m-%d")
 
     def update(self):
-        ...
+        self.date.set_text(f"{self.scene.core.clock.get_fps() :.1f}")
 
 
 class Day(mayaa.MayaaTextLabel):
@@ -350,6 +350,7 @@ class Workspace(mayaa.MayaaStackHorizontal):
         self.card_shower = CardShower(self)
         self.descriptor = CardDescriptor(self)
         self.add_element(self.descriptor)
+        self.add_element(self.card_shower)
 
 
 class MainScene(mayaa.MayaaScene):

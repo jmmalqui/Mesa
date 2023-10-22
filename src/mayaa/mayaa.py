@@ -278,6 +278,7 @@ class MayaaCoreFlag(Enum):
     NOT_DECLARED_ON_INIT = 0
     NON_TICK_BUSY_CLOCK = 1
     TICK_BUSY_CLOCK = 2
+    CORESURFACE = 3
 
 
 class MayaaAnimationCurves:
@@ -441,6 +442,7 @@ class MayaaSceneManager:
             self.current_scene.container.set_size_as_display()
             self.current_scene.container.set_position_as_core()
             self.current_scene.container.build()
+            self.current_scene.container._on_resize()
 
     def update(self):
         self.update_scene_ids()
@@ -460,18 +462,19 @@ class MayaaScene:
         self.container: _MayaaContainer = None
         self.modals = []
         self.informer = self.core.info_tag
-        self.surface = pg.Surface(self.core.display.get_size())
+        self.surface = self.core.display
         self.is_active = False
-        self.background_color = MayaaDefaultGUI.DEFAULT_SCENE_BACKGROUND_COLOR
+        self.background_color = "white"
 
     def set_background_color(self, color):
         self.background_color = color
 
     def resize(self):
-        self.surface = pg.Surface(pg.display.get_window_size())
+        self.surface = self.core.display
         self.container.set_size_as_display()
         self.container.set_position_as_core()
         self.container.build()
+        self.container._on_resize()
 
     def update(self):
         ...
@@ -554,6 +557,28 @@ class _MayaaContainer:
                 random.randint(0, 255),
                 random.randint(0, 255),
             ]
+            self.display_size = pg.display.get_window_size()
+            self.on_init = True
+            self.surface_type = MayaaCoreFlag.NOT_DECLARED_ON_INIT
+
+    def display_resized(self):
+        if self.on_init:
+            print("omg")
+            self.on_init = False
+            return True
+        if pg.display.get_window_size() == self.display_size:
+            return False
+        else:
+            self.display_size = pg.display.get_window_size()
+            return True
+
+    def perform_on_resize(self):
+        ...
+
+    def _on_resize(self):
+        self.perform_on_resize()
+        for element in self.elements:
+            element._on_resize()
 
     def set_rounded_borders(self, radius):
         self.radius = radius
@@ -642,7 +667,14 @@ class _MayaaContainer:
         return element.height
 
     def compute_elements_surfaces(self):
-        self.rect = pg.Rect(self.absolute_position, self.surface.get_size())
+        if self.surface_type == MayaaCoreFlag.CORESURFACE:
+            self.rect = pg.Rect(self.absolute_position, pg.display.get_window_size())
+        else:
+            self.rect = pg.Rect(self.absolute_position, self.surface.get_size())
+            print(
+                f"[DEBUG] Surface of size {self.surface.get_size()} has been made. Component: {self.__class__.__name__}"
+            )
+
         for element in self.elements:
             element.height = self._compute_elements_surfaces_handle_height_case(element)
             element.width = self._compute_elements_surfaces_handle_width_case(element)
@@ -662,6 +694,10 @@ class _MayaaContainer:
         for element in self.elements:
             element.compute_extra_inherit()
 
+    def round_corners(self):
+        if self.radius != MayaaCoreFlag.NOT_DECLARED_ON_INIT:
+            self.surface = rounded_border(self.surface, self.radius)
+
     def build(self):
         self.compute_elements_surfaces()
         self.compute_elements_positions()
@@ -672,7 +708,7 @@ class _MayaaContainer:
         self.absolute_position = pg.Vector2(0, 0)
         self.width = pg.display.get_window_size()[0]
         self.height = pg.display.get_window_size()[1]
-        self.surface = pg.Surface([self.width, self.height])
+        self.surface_type = MayaaCoreFlag.CORESURFACE
         self.rect = pg.Rect(self.absolute_position, pg.display.get_window_size())
 
     def set_position_as_core(self):
@@ -716,7 +752,8 @@ class _MayaaContainer:
     def set_size_as_display(self):
         self.width = pg.display.get_window_size()[0]
         self.height = pg.display.get_window_size()[1]
-        self.surface = pg.Surface([self.width, self.height])
+
+        self.surface = self.scene.core.display
 
     def set_height_as_display(self):
         self.height_flag = MayaaRenderFlag.DISPLAY_HEIGHT_WINDOW
@@ -776,7 +813,8 @@ class _MayaaContainer:
         ...
 
     def __corerender__(self):
-        self.surface.fill(self.background_color)
+        if self.background_color != None:
+            self.surface.fill(self.background_color)
 
         self.render_borders()
         self.render()
@@ -784,23 +822,29 @@ class _MayaaContainer:
         for element in self.elements:
             element.__corerender__()
         self.inherit_render()
-        if self.radius != MayaaCoreFlag.NOT_DECLARED_ON_INIT:
-            self.surface = rounded_border(self.surface, self.radius)
-        if self.scene.core.on_debug == False:
-            self.surface.set_alpha(255)
 
-            self.parent.surface.blit(self.surface, self.position)
+        if self.scene.core.on_debug == False:
+            if self.surface_type != MayaaCoreFlag.CORESURFACE:
+                self.surface.set_alpha(255)
+                if self.parent.surface_type == MayaaCoreFlag.CORESURFACE:
+                    self.scene.core.display.blit(self.surface, self.position)
+                else:
+                    self.parent.surface.blit(self.surface, self.position)
         else:
             thick = 2
 
-            pg.draw.rect(
-                self.surface,
-                self.debug_color,
-                self.surface.get_rect(),
-                thick,
-            )
-
-            self.parent.surface.blit(self.surface, self.position)
+            if self.surface_type != MayaaCoreFlag.CORESURFACE:
+                pg.draw.rect(
+                    self.surface,
+                    self.debug_color,
+                    self.surface.get_rect(),
+                    thick,
+                )
+                self.surface.set_alpha(255)
+                if self.parent.surface_type == MayaaCoreFlag.CORESURFACE:
+                    self.scene.core.display.blit(self.surface, self.position)
+                else:
+                    self.parent.surface.blit(self.surface, self.position)
 
     def render_borders(self):
         for index, border in enumerate(self.borders):
@@ -1323,6 +1367,7 @@ class MayaaTextLabel(_MayaaContainer):
         self.text_color = MayaaCoreFlag.NOT_DECLARED_ON_INIT
         self.text_center_v_flag = MayaaCoreFlag.NOT_DECLARED_ON_INIT
         self.text_center_h_flag = MayaaCoreFlag.NOT_DECLARED_ON_INIT
+        self.text_offset = pg.Vector2(0, 0)
 
     def center_text_vertical(self):
         self.text_center_v_flag = MayaaRenderFlag.TEXT_CENTERED_V
@@ -1368,6 +1413,9 @@ class MayaaTextLabel(_MayaaContainer):
                 )
                 self.make_text_surface()
 
+    def set_offset(self, x, y):
+        self.text_offset = pg.Vector2(x, y)
+
     def set_text(self, text):
         if self.text == MayaaCoreFlag.NOT_DECLARED_ON_INIT:
             self.text = text
@@ -1395,7 +1443,7 @@ class MayaaTextLabel(_MayaaContainer):
 
         if self.text_center_h_flag == MayaaRenderFlag.TEXT_CENTERED_H:
             self.text_position.x = (self.width - self.text_surface.get_width()) // 2
-
+        self.text_position += self.text_offset
         self.surface.blit(self.text_surface, self.text_position)
 
 
@@ -1596,7 +1644,7 @@ class MayaaCore:
                 # self.info_tag.inform("Info System", InfoTagLevels.NOTIFY)
 
             if event.type == pg.VIDEORESIZE:
-                self.scene_manager.resize_current_surface()
+                # self.scene_manager.resize_current_surface()
                 self.scene_manager.update_scene_sizes()
 
     def set_background_color(self, color):
