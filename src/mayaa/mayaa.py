@@ -272,6 +272,9 @@ class MayaaRenderFlag(Enum):
 
     IMAGE_CENTERED_V = 15
     IMAGE_CENTERED_H = 16
+    FLEXBOX = 17
+    GRID = 18
+    SINGLE_CONTAINER = 19
 
 
 class MayaaCoreFlag(Enum):
@@ -814,7 +817,8 @@ class _MayaaContainer:
 
     def __corerender__(self):
         if self.background_color != None:
-            self.surface.fill(self.background_color)
+            if self.surface_type != MayaaCoreFlag.CORESURFACE:
+                self.surface.fill(self.background_color)
 
         self.render_borders()
         self.render()
@@ -1430,6 +1434,7 @@ class MayaaTextLabel(_MayaaContainer):
         )
 
     def late_init(self):
+        print("name: ", self.__class__.__name__)
         self.font = pg.font.SysFont(
             self.font_name, self.font_size, self.bold, self.italic
         )
@@ -1648,6 +1653,15 @@ class MayaaCore:
 
             if event.type == pg.VIDEORESIZE:
                 # self.scene_manager.resize_current_surface()
+                self.scene_manager.update_scene_sizes()
+
+    def check_events(self):
+        self.scene_manager.pump_event(None)
+        for event in pg.event.get():
+            self.scene_manager.pump_event(event)
+            if event.type == pg.QUIT:
+                exit()
+            if event.type == pg.VIDEORESIZE:
                 self.scene_manager.update_scene_sizes()
 
     def set_background_color(self, color):
