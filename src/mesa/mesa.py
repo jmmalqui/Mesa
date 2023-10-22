@@ -230,28 +230,28 @@ def ease_out_elastic(x):
         return math.pow(2, -10 * x) * math.sin((x * 10 - 0.75) * c1) + 1
 
 
-class MayaaColors:
+class MesaColors:
     ALICEWHITE = [194, 206, 210]
     BLACKBLUE = [0, 14, 20]
     DARKBLUE = [0, 61, 92]
 
 
-class MayaaDefaultGUI:
+class MesaDefaultGUI:
     DEFAULT_APP_HEIGHT = 600
     DEFAULT_APP_WIDTH = 360
-    DEFAULT_APP_BACKGROUND_COLOR = MayaaColors.BLACKBLUE
-    DEFAULT_CONTAINER_BACKGROUND_COLOR = MayaaColors.DARKBLUE
-    DEFAULT_SCENE_BACKGROUND_COLOR = MayaaColors.DARKBLUE
+    DEFAULT_APP_BACKGROUND_COLOR = MesaColors.BLACKBLUE
+    DEFAULT_CONTAINER_BACKGROUND_COLOR = MesaColors.DARKBLUE
+    DEFAULT_SCENE_BACKGROUND_COLOR = MesaColors.DARKBLUE
     DEFAULT_FONT_SIZE = 16
     DEFAULT_TEXT_INPUT_SIZE = 16
     DEFAULT_FONT_TYPE = "consolas"
-    DEFAULT_TEXT_COLOR = MayaaColors.ALICEWHITE
-    DEFAULT_TEXT_HOVER_COLOR = MayaaColors.DARKBLUE
+    DEFAULT_TEXT_COLOR = MesaColors.ALICEWHITE
+    DEFAULT_TEXT_HOVER_COLOR = MesaColors.DARKBLUE
     HEADER_FONT_SIZE = 20
     SECONDARY_FONT_SIZE = 12
 
 
-class MayaaRenderFlag(Enum):
+class MesaRenderFlag(Enum):
     DISPLAY_HEIGHT_REMAIN = 0
     DISPLAY_HEIGHT_WINDOW = 1
     DISPLAY_HEIGHT_PARENT = 2
@@ -277,14 +277,14 @@ class MayaaRenderFlag(Enum):
     SINGLE_CONTAINER = 19
 
 
-class MayaaCoreFlag(Enum):
+class MesaCoreFlag(Enum):
     NOT_DECLARED_ON_INIT = 0
     NON_TICK_BUSY_CLOCK = 1
     TICK_BUSY_CLOCK = 2
     CORESURFACE = 3
 
 
-class MayaaAnimationCurves:
+class MesaAnimationCurves:
     EASE_IN_SINE = ease_in_sine
     EASE_OUT_SINE = ease_out_sine
     EASE_IN_OUT_SINE = ease_in_out_sine
@@ -403,14 +403,14 @@ class AnimVal:
         self.perform()
 
 
-class MayaaSceneManager:
+class MesaSceneManager:
     def __init__(self, core) -> None:
-        self.core: MayaaCore = core
-        self.scenes: Dict["str", MayaaScene] = {}
-        self.current_scene_name = MayaaCoreFlag.NOT_DECLARED_ON_INIT
+        self.core: MesaCore = core
+        self.scenes: Dict["str", MesaScene] = {}
+        self.current_scene_name = MesaCoreFlag.NOT_DECLARED_ON_INIT
         self.current_scene: Union[
-            MayaaScene, MayaaCoreFlag
-        ] = MayaaCoreFlag.NOT_DECLARED_ON_INIT
+            MesaScene, MesaCoreFlag
+        ] = MesaCoreFlag.NOT_DECLARED_ON_INIT
         self.events = []
 
     def set_init_scene(self, scene_name):
@@ -440,7 +440,7 @@ class MayaaSceneManager:
         self.current_scene_name = scene_name
 
     def resize_current_surface(self):
-        if self.current_scene != MayaaCoreFlag.NOT_DECLARED_ON_INIT:
+        if self.current_scene != MesaCoreFlag.NOT_DECLARED_ON_INIT:
             self.current_scene.surface = pg.Surface(pg.display.get_window_size())
             self.current_scene.container.set_size_as_display()
             self.current_scene.container.set_position_as_core()
@@ -455,14 +455,14 @@ class MayaaSceneManager:
         self.current_scene.__corerender__()
 
 
-class MayaaScene:
+class MesaScene:
     def __init__(self, core, scene_name, manager) -> None:
-        self.core: MayaaCore = core
+        self.core: MesaCore = core
         self.name = scene_name
         self.position = pg.Vector2([0, 0])
-        self.manager: MayaaSceneManager = manager
+        self.manager: MesaSceneManager = manager
         self.manager.add_scene(self)
-        self.container: _MayaaContainer = None
+        self.container: _MesaContainer = None
         self.modals = []
         self.informer = self.core.info_tag
         self.surface = self.core.display
@@ -514,37 +514,37 @@ class MayaaScene:
         self.blit_into_core()
 
 
-class MayaaComponent:
+class MesaComponent:
     def __init__(self) -> None:
         pass
 
 
-class _MayaaContainer:
+class _MesaContainer:
     def __init__(self, parent) -> None:
-        if isinstance(parent, MayaaScene) or isinstance(parent, _MayaaContainer):
-            self.type_flag = MayaaRenderFlag.CORE_CONTAINER
+        if isinstance(parent, MesaScene) or isinstance(parent, _MesaContainer):
+            self.type_flag = MesaRenderFlag.CORE_CONTAINER
             self.parent = parent
             self.parent.container = self
             self.elements = []
-            self.width = MayaaCoreFlag.NOT_DECLARED_ON_INIT
-            self.height = MayaaCoreFlag.NOT_DECLARED_ON_INIT
-            self.width_flag = MayaaCoreFlag.NOT_DECLARED_ON_INIT
-            self.height_flag = MayaaCoreFlag.NOT_DECLARED_ON_INIT
+            self.width = MesaCoreFlag.NOT_DECLARED_ON_INIT
+            self.height = MesaCoreFlag.NOT_DECLARED_ON_INIT
+            self.width_flag = MesaCoreFlag.NOT_DECLARED_ON_INIT
+            self.height_flag = MesaCoreFlag.NOT_DECLARED_ON_INIT
             self.margin = 0
-            self.surface = MayaaCoreFlag.NOT_DECLARED_ON_INIT
+            self.surface = MesaCoreFlag.NOT_DECLARED_ON_INIT
             self.position = pg.Vector2(0, 0)
-            if isinstance(parent, MayaaScene):
+            if isinstance(parent, MesaScene):
                 self.scene = parent
-            if isinstance(parent, _MayaaContainer):
+            if isinstance(parent, _MesaContainer):
                 self.scene = parent.scene
                 self.absolute_position = self.parent.absolute_position + self.position
             else:
                 self.absolute_position = pg.Vector2(0, 0)
-            self.rect = MayaaCoreFlag.NOT_DECLARED_ON_INIT
-            self.background_color = MayaaDefaultGUI.DEFAULT_CONTAINER_BACKGROUND_COLOR
+            self.rect = MesaCoreFlag.NOT_DECLARED_ON_INIT
+            self.background_color = MesaDefaultGUI.DEFAULT_CONTAINER_BACKGROUND_COLOR
             self.original_color = self.background_color.copy()
             self.font = pg.font.SysFont(
-                MayaaDefaultGUI.DEFAULT_FONT_TYPE, MayaaDefaultGUI.DEFAULT_FONT_SIZE
+                MesaDefaultGUI.DEFAULT_FONT_TYPE, MesaDefaultGUI.DEFAULT_FONT_SIZE
             )
             self.is_hovered = False
             self.borders = [
@@ -554,7 +554,7 @@ class _MayaaContainer:
                 [False, None, None],
             ]
             self.should_late_init = True
-            self.radius = MayaaCoreFlag.NOT_DECLARED_ON_INIT
+            self.radius = MesaCoreFlag.NOT_DECLARED_ON_INIT
             self.debug_color = [
                 random.randint(0, 255),
                 random.randint(0, 255),
@@ -562,7 +562,7 @@ class _MayaaContainer:
             ]
             self.display_size = pg.display.get_window_size()
             self.on_init = True
-            self.surface_type = MayaaCoreFlag.NOT_DECLARED_ON_INIT
+            self.surface_type = MesaCoreFlag.NOT_DECLARED_ON_INIT
 
     def display_resized(self):
         if self.on_init:
@@ -615,25 +615,25 @@ class _MayaaContainer:
             element.populate_rects()
 
     def _compute_elements_surfaces_handle_width_case(self, element):
-        if element.parent.type_flag == MayaaRenderFlag.SLIDABLE_CONTAINER_HORIZONTAL:
+        if element.parent.type_flag == MesaRenderFlag.SLIDABLE_CONTAINER_HORIZONTAL:
             return element.parent.width // 2
-        if element.parent.type_flag == MayaaRenderFlag.SLIDABLE_CONTAINER_VERTICAL:
+        if element.parent.type_flag == MesaRenderFlag.SLIDABLE_CONTAINER_VERTICAL:
             return element.parent.width
 
-        if element.width_flag == MayaaRenderFlag.DISPLAY_WIDTH_WINDOW:
+        if element.width_flag == MesaRenderFlag.DISPLAY_WIDTH_WINDOW:
             return pg.display.get_window_size()[0]
-        if element.width_flag == MayaaRenderFlag.DISPLAY_WIDTH_PARENT:
+        if element.width_flag == MesaRenderFlag.DISPLAY_WIDTH_PARENT:
             return element.parent.width
-        if element.width_flag == MayaaRenderFlag.DISPLAY_WIDTH_REMAIN:
+        if element.width_flag == MesaRenderFlag.DISPLAY_WIDTH_REMAIN:
             accum_width = 0
             for other_element in self.elements:
                 if other_element == element:
                     continue
                 else:
                     if (
-                        other_element.width == MayaaCoreFlag.NOT_DECLARED_ON_INIT
+                        other_element.width == MesaCoreFlag.NOT_DECLARED_ON_INIT
                         or other_element.width_flag
-                        == MayaaRenderFlag.DISPLAY_WIDTH_REMAIN
+                        == MesaRenderFlag.DISPLAY_WIDTH_REMAIN
                     ):
                         raise ValueError(
                             "Could not build surface. No enough information was given [TWO LAYOUTS WITH NO DEFINED WIDTH]"
@@ -643,24 +643,24 @@ class _MayaaContainer:
         return element.width
 
     def _compute_elements_surfaces_handle_height_case(self, element):
-        if element.parent.type_flag == MayaaRenderFlag.SLIDABLE_CONTAINER_HORIZONTAL:
+        if element.parent.type_flag == MesaRenderFlag.SLIDABLE_CONTAINER_HORIZONTAL:
             return element.parent.height
-        if element.parent.type_flag == MayaaRenderFlag.SLIDABLE_CONTAINER_VERTICAL:
+        if element.parent.type_flag == MesaRenderFlag.SLIDABLE_CONTAINER_VERTICAL:
             return element.parent.height // 2
-        if element.height_flag == MayaaRenderFlag.DISPLAY_HEIGHT_WINDOW:
+        if element.height_flag == MesaRenderFlag.DISPLAY_HEIGHT_WINDOW:
             return pg.display.get_window_size()[1]
-        if element.height_flag == MayaaRenderFlag.DISPLAY_HEIGHT_PARENT:
+        if element.height_flag == MesaRenderFlag.DISPLAY_HEIGHT_PARENT:
             return element.parent.height
-        if element.height_flag == MayaaRenderFlag.DISPLAY_HEIGHT_REMAIN:
+        if element.height_flag == MesaRenderFlag.DISPLAY_HEIGHT_REMAIN:
             accum_height = 0
             for other_element in self.elements:
                 if other_element == element:
                     continue
                 else:
                     if (
-                        other_element.height == MayaaCoreFlag.NOT_DECLARED_ON_INIT
+                        other_element.height == MesaCoreFlag.NOT_DECLARED_ON_INIT
                         or other_element.height_flag
-                        == MayaaRenderFlag.DISPLAY_HEIGHT_REMAIN
+                        == MesaRenderFlag.DISPLAY_HEIGHT_REMAIN
                     ):
                         raise ValueError(
                             "Could not build surface. No enough information was given [TWO LAYOUTS WITH NO DEFINED HEIGHT]"
@@ -670,7 +670,7 @@ class _MayaaContainer:
         return element.height
 
     def compute_elements_surfaces(self):
-        if self.surface_type == MayaaCoreFlag.CORESURFACE:
+        if self.surface_type == MesaCoreFlag.CORESURFACE:
             self.rect = pg.Rect(self.absolute_position, pg.display.get_window_size())
         else:
             self.rect = pg.Rect(self.absolute_position, self.surface.get_size())
@@ -690,7 +690,7 @@ class _MayaaContainer:
                 flags=pg.SRCALPHA,
             )
 
-            if isinstance(element, _MayaaContainer):
+            if isinstance(element, _MesaContainer):
                 element.compute_elements_surfaces()
 
     def compute_extra_inherit(self):
@@ -698,7 +698,7 @@ class _MayaaContainer:
             element.compute_extra_inherit()
 
     def round_corners(self):
-        if self.radius != MayaaCoreFlag.NOT_DECLARED_ON_INIT:
+        if self.radius != MesaCoreFlag.NOT_DECLARED_ON_INIT:
             self.surface = rounded_border(self.surface, self.radius)
 
     def build(self):
@@ -711,7 +711,7 @@ class _MayaaContainer:
         self.absolute_position = pg.Vector2(0, 0)
         self.width = pg.display.get_window_size()[0]
         self.height = pg.display.get_window_size()[1]
-        self.surface_type = MayaaCoreFlag.CORESURFACE
+        self.surface_type = MesaCoreFlag.CORESURFACE
         self.rect = pg.Rect(self.absolute_position, pg.display.get_window_size())
 
     def set_position_as_core(self):
@@ -759,22 +759,22 @@ class _MayaaContainer:
         self.surface = self.scene.core.display
 
     def set_height_as_display(self):
-        self.height_flag = MayaaRenderFlag.DISPLAY_HEIGHT_WINDOW
+        self.height_flag = MesaRenderFlag.DISPLAY_HEIGHT_WINDOW
 
     def set_width_as_display(self):
-        self.width_flag = MayaaRenderFlag.DISPLAY_WIDTH_WINDOW
+        self.width_flag = MesaRenderFlag.DISPLAY_WIDTH_WINDOW
 
     def set_height_as_remaining_area(self):
-        self.height_flag = MayaaRenderFlag.DISPLAY_HEIGHT_REMAIN
+        self.height_flag = MesaRenderFlag.DISPLAY_HEIGHT_REMAIN
 
     def set_width_as_remaining_area(self):
-        self.width_flag = MayaaRenderFlag.DISPLAY_WIDTH_REMAIN
+        self.width_flag = MesaRenderFlag.DISPLAY_WIDTH_REMAIN
 
     def set_height_as_parent(self):
-        self.height_flag = MayaaRenderFlag.DISPLAY_HEIGHT_PARENT
+        self.height_flag = MesaRenderFlag.DISPLAY_HEIGHT_PARENT
 
     def set_width_as_parent(self):
-        self.width_flag = MayaaRenderFlag.DISPLAY_WIDTH_PARENT
+        self.width_flag = MesaRenderFlag.DISPLAY_WIDTH_PARENT
 
     def cover_parent_surface(self):
         self.set_height_as_parent()
@@ -787,7 +787,7 @@ class _MayaaContainer:
         self.height = value
 
     def add_element(self, element):
-        if isinstance(element, (MayaaComponent, _MayaaContainer)):
+        if isinstance(element, (MesaComponent, _MesaContainer)):
             self.elements.append(element)
         else:
             raise ValueError(
@@ -817,7 +817,7 @@ class _MayaaContainer:
 
     def __corerender__(self):
         if self.background_color != None:
-            if self.surface_type != MayaaCoreFlag.CORESURFACE:
+            if self.surface_type != MesaCoreFlag.CORESURFACE:
                 self.surface.fill(self.background_color)
 
         self.render_borders()
@@ -828,16 +828,16 @@ class _MayaaContainer:
         self.inherit_render()
 
         if self.scene.core.on_debug == False:
-            if self.surface_type != MayaaCoreFlag.CORESURFACE:
+            if self.surface_type != MesaCoreFlag.CORESURFACE:
                 self.surface.set_alpha(255)
-                if self.parent.surface_type == MayaaCoreFlag.CORESURFACE:
+                if self.parent.surface_type == MesaCoreFlag.CORESURFACE:
                     self.scene.core.display.blit(self.surface, self.position)
                 else:
                     self.parent.surface.blit(self.surface, self.position)
         else:
             thick = 2
 
-            if self.surface_type != MayaaCoreFlag.CORESURFACE:
+            if self.surface_type != MesaCoreFlag.CORESURFACE:
                 pg.draw.rect(
                     self.surface,
                     self.debug_color,
@@ -845,7 +845,7 @@ class _MayaaContainer:
                     thick,
                 )
                 self.surface.set_alpha(255)
-                if self.parent.surface_type == MayaaCoreFlag.CORESURFACE:
+                if self.parent.surface_type == MesaCoreFlag.CORESURFACE:
                     self.scene.core.display.blit(self.surface, self.position)
                 else:
                     self.parent.surface.blit(self.surface, self.position)
@@ -891,7 +891,7 @@ class _MayaaContainer:
                     )
 
 
-class MayaaStackVertical(_MayaaContainer):
+class MesaStackVertical(_MesaContainer):
     def __init__(self, parent) -> None:
         super().__init__(parent)
 
@@ -915,7 +915,7 @@ class MayaaStackVertical(_MayaaContainer):
         return super().compute_elements_positions()
 
 
-class MayaaStackHorizontal(_MayaaContainer):
+class MesaStackHorizontal(_MesaContainer):
     def __init__(self, parent) -> None:
         super().__init__(parent)
 
@@ -937,30 +937,30 @@ class MayaaStackHorizontal(_MayaaContainer):
         return super().compute_elements_positions()
 
 
-class MayaaSlidablePanel(_MayaaContainer):
+class MesaSlidablePanel(_MesaContainer):
     def __init__(self, parent) -> None:
         super().__init__(parent)
-        self.type_flag = MayaaRenderFlag.CORE_CONTAINER
-        self.width_flag = MayaaRenderFlag.DISPLAY_WIDTH_PANEL
-        self.height_flag = MayaaRenderFlag.DISPLAY_HEIGHT_PANEL
+        self.type_flag = MesaRenderFlag.CORE_CONTAINER
+        self.width_flag = MesaRenderFlag.DISPLAY_WIDTH_PANEL
+        self.height_flag = MesaRenderFlag.DISPLAY_HEIGHT_PANEL
 
     def late_init(self):
         return super().late_init()
 
 
-class MayaaSlidablePanelVertical(MayaaStackVertical):
+class MesaSlidablePanelVertical(MesaStackVertical):
     def __init__(self, parent) -> None:
         super().__init__(parent)
-        self.type_flag = MayaaRenderFlag.SLIDABLE_CONTAINER_VERTICAL
+        self.type_flag = MesaRenderFlag.SLIDABLE_CONTAINER_VERTICAL
         self.perform_late_init = True
         self.slider_height = 5
         self.slider_color = "black"
         self.handle_get = False
         self.mouse_handle = pg.Vector2(pg.mouse.get_pos())
-        self.separator = MayaaCoreFlag.NOT_DECLARED_ON_INIT
-        self.middle_x = MayaaCoreFlag.NOT_DECLARED_ON_INIT
-        self.middle_y = MayaaCoreFlag.NOT_DECLARED_ON_INIT
-        self.slider = MayaaCoreFlag.NOT_DECLARED_ON_INIT
+        self.separator = MesaCoreFlag.NOT_DECLARED_ON_INIT
+        self.middle_x = MesaCoreFlag.NOT_DECLARED_ON_INIT
+        self.middle_y = MesaCoreFlag.NOT_DECLARED_ON_INIT
+        self.slider = MesaCoreFlag.NOT_DECLARED_ON_INIT
 
     def set_slider_color(self, color):
         self.slider_color = color
@@ -996,19 +996,19 @@ class MayaaSlidablePanelVertical(MayaaStackVertical):
         pg.draw.rect(self.surface, self.slider_color, self.slider, 0)
 
 
-class MayaaSlidablePanelHorizontal(MayaaStackHorizontal):
+class MesaSlidablePanelHorizontal(MesaStackHorizontal):
     def __init__(self, parent) -> None:
         super().__init__(parent)
-        self.type_flag = MayaaRenderFlag.SLIDABLE_CONTAINER_HORIZONTAL
+        self.type_flag = MesaRenderFlag.SLIDABLE_CONTAINER_HORIZONTAL
         self.perform_late_init = True
         self.slider_width = 5
         self.handle_get = False
         self.slider_color = "black"
         self.mouse_handle = pg.Vector2(pg.mouse.get_pos())
-        self.separator = MayaaCoreFlag.NOT_DECLARED_ON_INIT
-        self.middle_x = MayaaCoreFlag.NOT_DECLARED_ON_INIT
-        self.middle_y = MayaaCoreFlag.NOT_DECLARED_ON_INIT
-        self.slider = MayaaCoreFlag.NOT_DECLARED_ON_INIT
+        self.separator = MesaCoreFlag.NOT_DECLARED_ON_INIT
+        self.middle_x = MesaCoreFlag.NOT_DECLARED_ON_INIT
+        self.middle_y = MesaCoreFlag.NOT_DECLARED_ON_INIT
+        self.slider = MesaCoreFlag.NOT_DECLARED_ON_INIT
 
     def set_slider_color(self, color):
         self.slider_color = color
@@ -1044,24 +1044,24 @@ class MayaaSlidablePanelHorizontal(MayaaStackHorizontal):
         pg.draw.rect(self.surface, self.slider_color, self.slider, 0)
 
 
-class MayaaImage(_MayaaContainer):
+class MesaImage(_MesaContainer):
     def __init__(self, parent) -> None:
         super().__init__(parent)
-        self.image = MayaaCoreFlag.NOT_DECLARED_ON_INIT
-        self.original_image = MayaaCoreFlag.NOT_DECLARED_ON_INIT
-        self.image_pos = MayaaCoreFlag.NOT_DECLARED_ON_INIT
-        self.element_center_v_flag = MayaaCoreFlag.NOT_DECLARED_ON_INIT
-        self.element_center_h_flag = MayaaCoreFlag.NOT_DECLARED_ON_INIT
+        self.image = MesaCoreFlag.NOT_DECLARED_ON_INIT
+        self.original_image = MesaCoreFlag.NOT_DECLARED_ON_INIT
+        self.image_pos = MesaCoreFlag.NOT_DECLARED_ON_INIT
+        self.element_center_v_flag = MesaCoreFlag.NOT_DECLARED_ON_INIT
+        self.element_center_h_flag = MesaCoreFlag.NOT_DECLARED_ON_INIT
 
     def border_image(self):
         self.image = circle_chop(self.image)
         self.original_image = self.image.copy()
 
     def center_element_vertical(self):
-        self.element_center_v_flag = MayaaRenderFlag.ELEMENT_CENTERED_V
+        self.element_center_v_flag = MesaRenderFlag.ELEMENT_CENTERED_V
 
     def center_element_horizontal(self):
-        self.element_center_h_flag = MayaaRenderFlag.ELEMENT_CENTERED_H
+        self.element_center_h_flag = MesaRenderFlag.ELEMENT_CENTERED_H
 
     def center_element(self):
         self.center_element_vertical()
@@ -1097,10 +1097,10 @@ class MayaaImage(_MayaaContainer):
 
     def render(self):
         self.image_pos = pg.Vector2(0, 0)
-        if self.element_center_v_flag == MayaaRenderFlag.ELEMENT_CENTERED_V:
+        if self.element_center_v_flag == MesaRenderFlag.ELEMENT_CENTERED_V:
             self.image_pos.y = (self.height - self.image.get_height()) // 2
 
-        if self.element_center_h_flag == MayaaRenderFlag.ELEMENT_CENTERED_H:
+        if self.element_center_h_flag == MesaRenderFlag.ELEMENT_CENTERED_H:
             self.image_pos.x = (self.width - self.image.get_width()) // 2
         if self.image != None:
             self.surface.blit(self.image, self.image_pos)
@@ -1108,16 +1108,16 @@ class MayaaImage(_MayaaContainer):
             self.surface.fill("black")
 
 
-class MayaaSingleContainer(_MayaaContainer):
+class MesaSingleContainer(_MesaContainer):
     def __init__(self, parent) -> None:
         super().__init__(parent)
-        self.element_center_v_flag = MayaaCoreFlag.NOT_DECLARED_ON_INIT
-        self.element_center_h_flag = MayaaCoreFlag.NOT_DECLARED_ON_INIT
-        self.image = MayaaCoreFlag.NOT_DECLARED_ON_INIT
-        self.original_image = MayaaCoreFlag.NOT_DECLARED_ON_INIT
-        self.image_pos = MayaaCoreFlag.NOT_DECLARED_ON_INIT
-        self.image_center_v_flag = MayaaCoreFlag.NOT_DECLARED_ON_INIT
-        self.image_center_h_flag = MayaaCoreFlag.NOT_DECLARED_ON_INIT
+        self.element_center_v_flag = MesaCoreFlag.NOT_DECLARED_ON_INIT
+        self.element_center_h_flag = MesaCoreFlag.NOT_DECLARED_ON_INIT
+        self.image = MesaCoreFlag.NOT_DECLARED_ON_INIT
+        self.original_image = MesaCoreFlag.NOT_DECLARED_ON_INIT
+        self.image_pos = MesaCoreFlag.NOT_DECLARED_ON_INIT
+        self.image_center_v_flag = MesaCoreFlag.NOT_DECLARED_ON_INIT
+        self.image_center_h_flag = MesaCoreFlag.NOT_DECLARED_ON_INIT
 
     def set_background_image(self, path):
         if path == None:
@@ -1129,10 +1129,10 @@ class MayaaSingleContainer(_MayaaContainer):
             self.original_image = self.image.copy()
 
     def center_image_vertical(self):
-        self.image_center_v_flag = MayaaRenderFlag.IMAGE_CENTERED_V
+        self.image_center_v_flag = MesaRenderFlag.IMAGE_CENTERED_V
 
     def center_image_horizontal(self):
-        self.image_center_h_flag = MayaaRenderFlag.IMAGE_CENTERED_H
+        self.image_center_h_flag = MesaRenderFlag.IMAGE_CENTERED_H
 
     def center_image(self):
         self.center_image_vertical()
@@ -1155,10 +1155,10 @@ class MayaaSingleContainer(_MayaaContainer):
         self.image = pg.transform.smoothscale(self.original_image, [width, height])
 
     def center_element_vertical(self):
-        self.element_center_v_flag = MayaaRenderFlag.ELEMENT_CENTERED_V
+        self.element_center_v_flag = MesaRenderFlag.ELEMENT_CENTERED_V
 
     def center_element_horizontal(self):
-        self.element_center_h_flag = MayaaRenderFlag.ELEMENT_CENTERED_H
+        self.element_center_h_flag = MesaRenderFlag.ELEMENT_CENTERED_H
 
     def center_element(self):
         self.center_element_vertical()
@@ -1169,15 +1169,15 @@ class MayaaSingleContainer(_MayaaContainer):
             raise ValueError(
                 f"MayaSingleContainer can only handle one children container, you may have added more than two or not added any.  Num of Children: {len(self.elements)}"
             )
-        element: _MayaaContainer = self.elements[0]
-        if self.element_center_v_flag == MayaaRenderFlag.ELEMENT_CENTERED_V:
+        element: _MesaContainer = self.elements[0]
+        if self.element_center_v_flag == MesaRenderFlag.ELEMENT_CENTERED_V:
             element.position.y = (self.height - element.surface.get_height()) // 2
 
             element.absolute_position.y = self.absolute_position.y + element.position.y
             element.rect = pg.Rect(
                 element.absolute_position, element.surface.get_size()
             )
-        if self.element_center_h_flag == MayaaRenderFlag.ELEMENT_CENTERED_H:
+        if self.element_center_h_flag == MesaRenderFlag.ELEMENT_CENTERED_H:
             element.position.x = (self.width - element.surface.get_width()) // 2
             element.absolute_position.x = self.absolute_position.x + element.position.x
 
@@ -1195,30 +1195,30 @@ class MayaaSingleContainer(_MayaaContainer):
 
     def render(self):
         self.image_pos = pg.Vector2(0, 0)
-        if self.image_center_v_flag == MayaaRenderFlag.IMAGE_CENTERED_V:
+        if self.image_center_v_flag == MesaRenderFlag.IMAGE_CENTERED_V:
             self.image_pos.y = (self.height - self.image.get_height()) // 2
-        if self.image_center_h_flag == MayaaRenderFlag.IMAGE_CENTERED_H:
+        if self.image_center_h_flag == MesaRenderFlag.IMAGE_CENTERED_H:
             self.image_pos.x = (self.width - self.image.get_width()) // 2
-        if self.image != MayaaCoreFlag.NOT_DECLARED_ON_INIT:
+        if self.image != MesaCoreFlag.NOT_DECLARED_ON_INIT:
             self.surface.blit(self.image, self.image_pos)
 
 
-class MayaaTextBox(_MayaaContainer):
+class MesaTextBox(_MesaContainer):
     def __init__(self, parent) -> None:
         super().__init__(parent)
-        self.font_name = MayaaCoreFlag.NOT_DECLARED_ON_INIT
-        self.font = MayaaCoreFlag.NOT_DECLARED_ON_INIT
-        self.font_size = MayaaCoreFlag.NOT_DECLARED_ON_INIT
+        self.font_name = MesaCoreFlag.NOT_DECLARED_ON_INIT
+        self.font = MesaCoreFlag.NOT_DECLARED_ON_INIT
+        self.font_size = MesaCoreFlag.NOT_DECLARED_ON_INIT
         self.text = ""
-        self.text_surface = MayaaCoreFlag.NOT_DECLARED_ON_INIT
+        self.text_surface = MesaCoreFlag.NOT_DECLARED_ON_INIT
         self.bold = False
         self.italic = False
         self.text_background_color = None
         self.antialias = True
-        self.text_color = MayaaCoreFlag.NOT_DECLARED_ON_INIT
+        self.text_color = MesaCoreFlag.NOT_DECLARED_ON_INIT
         self.buffer = TextBuffer()
-        self.text_center_v_flag = MayaaCoreFlag.NOT_DECLARED_ON_INIT
-        self.text_center_h_flag = MayaaCoreFlag.NOT_DECLARED_ON_INIT
+        self.text_center_v_flag = MesaCoreFlag.NOT_DECLARED_ON_INIT
+        self.text_center_h_flag = MesaCoreFlag.NOT_DECLARED_ON_INIT
         self.metrics = []
         self.pointer_position = self.get_pointer_position()
         self.blink = False
@@ -1267,9 +1267,9 @@ class MayaaTextBox(_MayaaContainer):
                     self.pointer_position = self.get_pointer_position()
 
     def set_text_color(self, text_color):
-        if self.text_color == MayaaCoreFlag.NOT_DECLARED_ON_INIT:
+        if self.text_color == MesaCoreFlag.NOT_DECLARED_ON_INIT:
             self.text_color = text_color
-        if self.text_surface != MayaaCoreFlag.NOT_DECLARED_ON_INIT:
+        if self.text_surface != MesaCoreFlag.NOT_DECLARED_ON_INIT:
             if text_color != self.text_color:
                 self.text_color = text_color
                 self.make_text_surface()
@@ -1290,9 +1290,9 @@ class MayaaTextBox(_MayaaContainer):
         self.font_name = font_name
 
     def set_font_size(self, font_size):
-        if self.font_size == MayaaCoreFlag.NOT_DECLARED_ON_INIT:
+        if self.font_size == MesaCoreFlag.NOT_DECLARED_ON_INIT:
             self.font_size = font_size
-        if self.font_size != MayaaCoreFlag.NOT_DECLARED_ON_INIT:
+        if self.font_size != MesaCoreFlag.NOT_DECLARED_ON_INIT:
             if font_size != self.font_size:
                 self.font_size = font_size
                 self.font = pg.font.SysFont(
@@ -1301,9 +1301,9 @@ class MayaaTextBox(_MayaaContainer):
                 self.make_text_surface()
 
     def set_text(self, text):
-        if self.text == MayaaCoreFlag.NOT_DECLARED_ON_INIT:
+        if self.text == MesaCoreFlag.NOT_DECLARED_ON_INIT:
             self.text = text
-        if self.text_surface != MayaaCoreFlag.NOT_DECLARED_ON_INIT:
+        if self.text_surface != MesaCoreFlag.NOT_DECLARED_ON_INIT:
             if text != self.text:
                 self.text = text
                 self.make_text_surface()
@@ -1332,10 +1332,10 @@ class MayaaTextBox(_MayaaContainer):
 
     def render(self):
         self.text_position = pg.Vector2(0, 0)
-        if self.text_center_v_flag == MayaaRenderFlag.TEXT_CENTERED_V:
+        if self.text_center_v_flag == MesaRenderFlag.TEXT_CENTERED_V:
             self.text_position.y = (self.height - self.text_surface.get_height()) // 2
 
-        if self.text_center_h_flag == MayaaRenderFlag.TEXT_CENTERED_H:
+        if self.text_center_h_flag == MesaRenderFlag.TEXT_CENTERED_H:
             self.text_position.x = (self.width - self.text_surface.get_width()) // 2
         if self.tick % 5 == 0:
             self.blink = not self.blink
@@ -1356,37 +1356,37 @@ class MayaaTextBox(_MayaaContainer):
         self.surface.blit(self.text_surface, self.text_position)
 
 
-class MayaaTextLabel(_MayaaContainer):
+class MesaTextLabel(_MesaContainer):
     def __init__(self, parent) -> None:
         super().__init__(parent)
-        self.font_name = MayaaCoreFlag.NOT_DECLARED_ON_INIT
-        self.font = MayaaCoreFlag.NOT_DECLARED_ON_INIT
-        self.font_size = MayaaCoreFlag.NOT_DECLARED_ON_INIT
-        self.text = MayaaCoreFlag.NOT_DECLARED_ON_INIT
-        self.text_surface = MayaaCoreFlag.NOT_DECLARED_ON_INIT
+        self.font_name = MesaCoreFlag.NOT_DECLARED_ON_INIT
+        self.font = MesaCoreFlag.NOT_DECLARED_ON_INIT
+        self.font_size = MesaCoreFlag.NOT_DECLARED_ON_INIT
+        self.text = MesaCoreFlag.NOT_DECLARED_ON_INIT
+        self.text_surface = MesaCoreFlag.NOT_DECLARED_ON_INIT
         self.bold = False
         self.italic = False
         self.text_background_color = None
         self.antialias = True
-        self.text_color = MayaaCoreFlag.NOT_DECLARED_ON_INIT
-        self.text_center_v_flag = MayaaCoreFlag.NOT_DECLARED_ON_INIT
-        self.text_center_h_flag = MayaaCoreFlag.NOT_DECLARED_ON_INIT
+        self.text_color = MesaCoreFlag.NOT_DECLARED_ON_INIT
+        self.text_center_v_flag = MesaCoreFlag.NOT_DECLARED_ON_INIT
+        self.text_center_h_flag = MesaCoreFlag.NOT_DECLARED_ON_INIT
         self.text_offset = pg.Vector2(0, 0)
 
     def center_text_vertical(self):
-        self.text_center_v_flag = MayaaRenderFlag.TEXT_CENTERED_V
+        self.text_center_v_flag = MesaRenderFlag.TEXT_CENTERED_V
 
     def center_text_horizontal(self):
-        self.text_center_h_flag = MayaaRenderFlag.TEXT_CENTERED_H
+        self.text_center_h_flag = MesaRenderFlag.TEXT_CENTERED_H
 
     def center_text(self):
         self.center_text_horizontal()
         self.center_text_vertical()
 
     def set_text_color(self, text_color):
-        if self.text_color == MayaaCoreFlag.NOT_DECLARED_ON_INIT:
+        if self.text_color == MesaCoreFlag.NOT_DECLARED_ON_INIT:
             self.text_color = text_color
-        if self.text_surface != MayaaCoreFlag.NOT_DECLARED_ON_INIT:
+        if self.text_surface != MesaCoreFlag.NOT_DECLARED_ON_INIT:
             if text_color != self.text_color:
                 self.text_color = text_color
                 self.make_text_surface()
@@ -1407,9 +1407,9 @@ class MayaaTextLabel(_MayaaContainer):
         self.font_name = font_name
 
     def set_font_size(self, font_size):
-        if self.font_size == MayaaCoreFlag.NOT_DECLARED_ON_INIT:
+        if self.font_size == MesaCoreFlag.NOT_DECLARED_ON_INIT:
             self.font_size = font_size
-        if self.font_size != MayaaCoreFlag.NOT_DECLARED_ON_INIT:
+        if self.font_size != MesaCoreFlag.NOT_DECLARED_ON_INIT:
             if font_size != self.font_size:
                 self.font_size = font_size
                 self.font = pg.font.SysFont(
@@ -1421,9 +1421,9 @@ class MayaaTextLabel(_MayaaContainer):
         self.text_offset = pg.Vector2(x, y)
 
     def set_text(self, text):
-        if self.text == MayaaCoreFlag.NOT_DECLARED_ON_INIT:
+        if self.text == MesaCoreFlag.NOT_DECLARED_ON_INIT:
             self.text = text
-        if self.text_surface != MayaaCoreFlag.NOT_DECLARED_ON_INIT:
+        if self.text_surface != MesaCoreFlag.NOT_DECLARED_ON_INIT:
             if text != self.text:
                 self.text = text
                 self.make_text_surface()
@@ -1443,19 +1443,19 @@ class MayaaTextLabel(_MayaaContainer):
 
     def render(self):
         self.text_position = pg.Vector2(0, 0)
-        if self.text_center_v_flag == MayaaRenderFlag.TEXT_CENTERED_V:
+        if self.text_center_v_flag == MesaRenderFlag.TEXT_CENTERED_V:
             self.text_position.y = (self.height - self.text_surface.get_height()) // 2
 
-        if self.text_center_h_flag == MayaaRenderFlag.TEXT_CENTERED_H:
+        if self.text_center_h_flag == MesaRenderFlag.TEXT_CENTERED_H:
             self.text_position.x = (self.width - self.text_surface.get_width()) // 2
         self.text_position += self.text_offset
         self.surface.blit(self.text_surface, self.text_position)
 
 
-class MayaaButtonText(MayaaTextLabel):
+class MesaButtonText(MesaTextLabel):
     def __init__(self, parent) -> None:
         super().__init__(parent)
-        self.signal = MayaaCoreFlag.NOT_DECLARED_ON_INIT
+        self.signal = MesaCoreFlag.NOT_DECLARED_ON_INIT
         self.set_color_as_parent()
         self.callback_result = None
 
@@ -1492,10 +1492,10 @@ class InfoTagLevels:
 
 class InfoTagHandler:
     def __init__(self, core) -> None:
-        self.core: MayaaCore = core
+        self.core: MesaCore = core
         self.tags: list[InfoTag] = []
         self.tag_font = pg.font.SysFont(
-            MayaaDefaultGUI.DEFAULT_FONT_TYPE, 15, False, True
+            MesaDefaultGUI.DEFAULT_FONT_TYPE, 15, False, True
         )
 
     def inform(self, information, level=InfoTagLevels.NOTIFY):
@@ -1528,13 +1528,13 @@ class InfoTag:
         self.y = AnimVal(self.animation, 0)
         self.alpha = AnimVal(self.animation, 255)
         self.text = self.handler.tag_font.render(
-            self.information, True, MayaaDefaultGUI.DEFAULT_TEXT_COLOR, wraplength=450
+            self.information, True, MesaDefaultGUI.DEFAULT_TEXT_COLOR, wraplength=450
         )
         self.surface = pg.Surface(
             [self.text.get_width() + 50, self.text.get_height() + 20]
         ).convert_alpha()
         self.rect = pg.Rect([0, 0], self.surface.get_size())
-        self.x.move_to(60, 60, MayaaAnimationCurves.EASE_OUT_CUBIC)
+        self.x.move_to(60, 60, MesaAnimationCurves.EASE_OUT_CUBIC)
         self.gap = 20
         self.vanishing_time = 100
 
@@ -1545,7 +1545,7 @@ class InfoTag:
             if tag.id < self.id:
                 y_difference += self.gap
                 y_difference += tag.surface.get_height()
-        self.y.move_to(-1 * y_difference, 30, MayaaAnimationCurves.EASE_OUT_SINE)
+        self.y.move_to(-1 * y_difference, 30, MesaAnimationCurves.EASE_OUT_SINE)
 
     def update(self):
         self.tick += 1
@@ -1553,7 +1553,7 @@ class InfoTag:
         self.rect = pg.Rect([0, 0], self.surface.get_size())
         if self.tick == self.level.ttl:
             self.alpha.move_to(
-                0, self.vanishing_time, MayaaAnimationCurves.EASE_IN_SINE
+                0, self.vanishing_time, MesaAnimationCurves.EASE_IN_SINE
             )
         if self.tick >= self.level.ttl + self.vanishing_time:
             self.handler.tags.remove(self)
@@ -1577,21 +1577,21 @@ class InfoTag:
         )
 
 
-class MayaaCore:
+class MesaCore:
     def __init__(self) -> None:
         pg.init()
         self.perform_late_init = True
-        self.display = MayaaCoreFlag.NOT_DECLARED_ON_INIT
-        self.clock = MayaaCoreFlag.NOT_DECLARED_ON_INIT
-        self.clock_type = MayaaCoreFlag.NOT_DECLARED_ON_INIT
-        self.clock_fps = MayaaCoreFlag.NOT_DECLARED_ON_INIT
-        self.rendering_flags = MayaaCoreFlag.NOT_DECLARED_ON_INIT
-        self.bacgkround_color = MayaaCoreFlag.NOT_DECLARED_ON_INIT
-        self.delta_time = MayaaCoreFlag.NOT_DECLARED_ON_INIT
-        self.caption = MayaaCoreFlag.NOT_DECLARED_ON_INIT
+        self.display = MesaCoreFlag.NOT_DECLARED_ON_INIT
+        self.clock = MesaCoreFlag.NOT_DECLARED_ON_INIT
+        self.clock_type = MesaCoreFlag.NOT_DECLARED_ON_INIT
+        self.clock_fps = MesaCoreFlag.NOT_DECLARED_ON_INIT
+        self.rendering_flags = MesaCoreFlag.NOT_DECLARED_ON_INIT
+        self.bacgkround_color = MesaCoreFlag.NOT_DECLARED_ON_INIT
+        self.delta_time = MesaCoreFlag.NOT_DECLARED_ON_INIT
+        self.caption = MesaCoreFlag.NOT_DECLARED_ON_INIT
 
         self.info_tag = InfoTagHandler(self)
-        self.scene_manager = MayaaSceneManager(self)
+        self.scene_manager = MesaSceneManager(self)
         self.on_debug = False
 
     def set_application_name(self, title):
@@ -1603,16 +1603,16 @@ class MayaaCore:
 
     def set_clock(self, fps):
         self.clock = pg.Clock()
-        self.clock_type = MayaaCoreFlag.NON_TICK_BUSY_CLOCK
+        self.clock_type = MesaCoreFlag.NON_TICK_BUSY_CLOCK
         self.clock_fps = fps
 
     def set_busy_clock(self, fps):
         self.clock = pg.Clock()
-        self.clock_type = MayaaCoreFlag.TICK_BUSY_CLOCK
+        self.clock_type = MesaCoreFlag.TICK_BUSY_CLOCK
         self.clock_fps = fps
 
     def set_display_size(self, height, width):
-        if self.rendering_flags == MayaaCoreFlag.NOT_DECLARED_ON_INIT:
+        if self.rendering_flags == MesaCoreFlag.NOT_DECLARED_ON_INIT:
             self.rendering_flags = 0
             self.display = pg.display.set_mode(
                 [height, width], flags=self.rendering_flags
@@ -1627,15 +1627,15 @@ class MayaaCore:
         """Gets called on the first frame of the update loop, checks if the display has been initialized, as well as other core components of the application.\n
         Do not overwrite this function.
         """
-        if self.display == MayaaCoreFlag.NOT_DECLARED_ON_INIT:
+        if self.display == MesaCoreFlag.NOT_DECLARED_ON_INIT:
             raise ValueError(
                 "Display was not initialized, perhaps you forgot set_display_size() ?"
             )
 
-        if self.clock == MayaaCoreFlag.NOT_DECLARED_ON_INIT:
+        if self.clock == MesaCoreFlag.NOT_DECLARED_ON_INIT:
             self.set_clock(60)
-        if self.bacgkround_color == MayaaCoreFlag.NOT_DECLARED_ON_INIT:
-            self.bacgkround_color = MayaaDefaultGUI.DEFAULT_APP_BACKGROUND_COLOR
+        if self.bacgkround_color == MesaCoreFlag.NOT_DECLARED_ON_INIT:
+            self.bacgkround_color = MesaDefaultGUI.DEFAULT_APP_BACKGROUND_COLOR
 
     def check_events(self):
         self.scene_manager.pump_event(None)
@@ -1691,9 +1691,9 @@ class MayaaCore:
         pg.display.flip()
 
     def make_clock(self):
-        if self.clock_type == MayaaCoreFlag.NON_TICK_BUSY_CLOCK:
+        if self.clock_type == MesaCoreFlag.NON_TICK_BUSY_CLOCK:
             self.delta_time = self.clock.tick(self.clock_fps)
-        elif self.clock_type == MayaaCoreFlag.TICK_BUSY_CLOCK:
+        elif self.clock_type == MesaCoreFlag.TICK_BUSY_CLOCK:
             self.delta_time = self.clock.tick_busy_loop(self.clock_fps)
 
     def run(self):
