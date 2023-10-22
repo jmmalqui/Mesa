@@ -1619,6 +1619,9 @@ class MayaaCore:
             self.display = pg.display.set_mode([height, width], flag)
 
     def late_init(self):
+        """Gets called on the first frame of the update loop, checks if the display has been initialized, as well as other core components of the application.\n
+        Do not overwrite this function.
+        """
         if self.display == MayaaCoreFlag.NOT_DECLARED_ON_INIT:
             raise ValueError(
                 "Display was not initialized, perhaps you forgot set_display_size() ?"
