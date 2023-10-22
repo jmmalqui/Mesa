@@ -8,6 +8,8 @@ Mesa is still on early development, thus, untested and undefined behaviour may a
 
 ## Get Started
 
+This is a placeholder, mesa is not uploaded to pip yet.
+
 ```bash
 pip install mesa
 ```
