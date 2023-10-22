@@ -23,7 +23,7 @@ class MainScene(MesaScene):
         self.container.set_as_core()
         self.container.build()
 
-class MyApplication(MayaaCore):
+class MyApplication(MesaCore):
     def __init__(self) -> None:
         super().__init__()
         self.set_application_name("MyApp")
