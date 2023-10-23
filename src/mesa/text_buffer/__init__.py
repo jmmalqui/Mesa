@@ -1,1 +1,1 @@
-from text_buffer import TextBuffer
+from mesa.text_buffer.text_buffer import TextBuffer

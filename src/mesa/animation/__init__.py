@@ -1,2 +1,2 @@
-from animation import Animation, AnimVal
-from easing import MesaAnimationCurves
+from mesa.animation.animation import Animation, AnimVal
+from mesa.animation.easing import MesaAnimationCurves

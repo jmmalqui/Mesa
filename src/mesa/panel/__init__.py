@@ -1,2 +1,2 @@
-from hpanel import MesaSlidablePanelHorizontal
-from vpanel import MesaSlidablePanelVertical
+from mesa.panel.hpanel import MesaSlidablePanelHorizontal
+from mesa.panel.vpanel import MesaSlidablePanelVertical

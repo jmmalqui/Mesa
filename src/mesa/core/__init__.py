@@ -1,1 +1,1 @@
-from core import MesaCore
+from mesa.core.core import MesaCore

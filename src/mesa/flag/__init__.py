@@ -1,2 +1,2 @@
-from core_flag import MesaCoreFlag
-from render_flag import MesaRenderFlag
+from mesa.flag.core_flag import MesaCoreFlag
+from mesa.flag.render_flag import MesaRenderFlag

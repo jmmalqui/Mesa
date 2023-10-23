@@ -1,8 +1,12 @@
+from mesa.core import MesaCore
+import pygame as pg
 from mesa.scene.scene_manager import MesaSceneManager
 
 
 class MesaScene:
     def __init__(self, core, scene_name, manager) -> None:
+        from mesa.container import _MesaContainer
+
         self.core: MesaCore = core
         self.name = scene_name
         self.position = pg.Vector2([0, 0])

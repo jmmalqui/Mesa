@@ -1,7 +1,7 @@
 import os
 import pygame as pg
 from mesa.flag.core_flag import *
-from mesa.scene.scene_manager import MesaSceneManager
+
 from mesa.info_tag.tag import InfoTagHandler
 
 os.environ["SDL_IME_SHOW_UI"] = "1"
@@ -9,6 +9,8 @@ os.environ["SDL_IME_SHOW_UI"] = "1"
 
 class MesaCore:
     def __init__(self) -> None:
+        from mesa.scene.scene_manager import MesaSceneManager
+
         pg.init()
         self.perform_late_init = True
         self.display = MesaCoreFlag.NOT_DECLARED_ON_INIT

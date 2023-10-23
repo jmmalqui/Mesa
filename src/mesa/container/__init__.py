@@ -1,1 +1,1 @@
-from container import _MesaContainer
+from mesa.container.container import _MesaContainer
