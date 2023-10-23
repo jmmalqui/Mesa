@@ -1,3 +1,9 @@
+import pygame as pg
+from mesa.core import *
+from mesa.animation import *
+from mesa.style import *
+
+
 class TagProperty:
     def __init__(self, fill, border, ttl) -> None:
         self.fill = fill
